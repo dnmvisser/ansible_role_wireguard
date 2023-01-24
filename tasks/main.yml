@@ -41,7 +41,7 @@
 
 - name: Ensure wireguard is started and enabled
   systemd:
-    name: "wg-quick@{{ wg_interface }}"
+    name: "wg-quick@{{ wg_iface }}"
     state: started
     enabled: true
 

@@ -5,11 +5,11 @@ wg_uplink_addresses: "{{ ansible_facts[wg_uplink_iface].ipv6|selectattr('scope',
 wg_uplink_prefix_ipv4: "{{ (ansible_facts[wg_uplink_iface].ipv4.network~'/'~ansible_facts[wg_uplink_iface].ipv4.netmask)|ipaddr('net') }}"
 wg_uplink_prefix_ipv6: "{{ (ansible_facts[wg_uplink_iface].ipv6[0].address~'/48')|ipaddr('network/prefix') }}"
 
-wg_interface: wg0
+wg_iface: wg0
 wg_port: 51820
 wg_hostname: vpn.foo.bar  # this is what clients connect to
 wg_config_dir: /etc/wireguard
-wg_config_file: "{{ wg_config_dir }}/{{ wg_interface }}.conf"
+wg_config_file: "{{ wg_config_dir }}/{{ wg_iface }}.conf"
 
 # The first IP will be the server's addresses
 # All subsuquent IPs will be for clients

@@ -1,6 +1,6 @@
 ---
 - name: wireguard_restart
   systemd:
-    name: "wg-quick@{{ wg_interface }}"
+    name: "wg-quick@{{ wg_iface }}"
     state: restarted
     daemon_reload: true
