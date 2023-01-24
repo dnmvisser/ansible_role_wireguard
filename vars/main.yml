@@ -1,0 +1,6 @@
+---
+wg_packages:
+  - wireguard
+  - iptables
+
+wg_kernel_debug_control_file: /sys/kernel/debug/dynamic_debug/control

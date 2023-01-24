@@ -1,0 +1,50 @@
+---
+wg_uplink_iface: "{{ ansible_default_ipv4.interface }}"
+wg_uplink_addresses: "{{ ansible_facts[wg_uplink_iface].ipv6|selectattr('scope','eq','global')|map(attribute='address') | union(
+  [ansible_facts[uplink_iface].ipv4.address]) }}"
+wg_uplink_prefix_ipv4: "{{ (ansible_facts[wg_uplink_iface].ipv4.network~'/'~ansible_facts[wg_uplink_iface].ipv4.netmask)|ipaddr('net') }}"
+wg_uplink_prefix_ipv6: "{{ (ansible_facts[wg_uplink_iface].ipv6[0].address~'/48')|ipaddr('network/prefix') }}"
+
+wg_interface: wg0
+wg_port: 51820
+wg_hostname: vpn.foo.bar  # this is what clients connect to
+wg_config_dir: /etc/wireguard
+wg_config_file: "{{ wg_config_dir }}/{{ wg_interface }}.conf"
+
+# The first IP will be the server's addresses
+# All subsuquent IPs will be for clients
+wg_tunnel_ipv4_prefix: 10.99.99.0/24
+wg_tunnel_ipv6_prefix: fd99:9999::/64
+wg_resolver: "{{ wg_tunnel_ipv6_prefix | ipaddr(1) }}"  # the server's tunnel IP
+
+# Generate this by running:
+# privkey=$(wg genkey); echo "Private key: $privkey"; pubkey=$(echo $privkey | wg pubkey); echo "Public key:  $pubkey"
+#wg_private_key: ....
+#wg_public_key: ....
+
+wg_dns_search_domains: []
+# wg_dns_search_domains:
+#   - foo.bar
+
+wg_client_tunnel_flavors:
+  - tunnel: all
+    allowedips:
+      - '0.0.0.0/0'
+      - '::/0'
+  - tunnel: split
+    allowedips:
+      - "{{ wg_uplink_prefix_ipv4 }}"
+      - "{{ wg_uplink_prefix_ipv6 }}"
+
+wg_clients: []
+# wg_clients:
+#   - name: frank
+#     private_key: dsfasdf
+#     public_key: asdfasdf
+#     preshared_key: fasdfasfd
+#   - name: rob
+#     private_key: dsfasdf
+#     public_key: asdfasdf
+#     preshared_key: fasdfasfd
+
+

@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+[Interface]
+Address = {{ wg_tunnel_ipv4_prefix | ipaddr('1') }},{{ wg_tunnel_ipv6_prefix | ipaddr('1') }}
+ListenPort = {{ wg_port }}
+PrivateKey = {{ wg_private_key }}
+# public key = {{ wg_public_key }}
+{% if wg_postup is defined %}
+PostUp = {{ wg_postup }}
+{% endif %}
+{% if wg_postdown is defined %}
+PostDown = {{ wg_postdown }}
+{% endif %}
+
+{% for client in wg_clients %}
+# {{ client.name }}
+[Peer]
+PublicKey = {{ client.public_key }}
+PresharedKey = {{ client.preshared_key }}
+AllowedIPs = {{ wg_tunnel_ipv4_prefix | ipaddr(loop.index+1) | ipaddr('address') }}/32,{{ wg_tunnel_ipv6_prefix | ipaddr(loop.index+1)|ipaddr('address') }}/128
+{% endfor %}

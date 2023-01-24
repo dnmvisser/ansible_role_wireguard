@@ -1,0 +1,58 @@
+---
+- name: Ensure IP forwarding is enabled
+  sysctl:
+    name: "{{ item }}"
+    value: '1'
+    state: present
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+
+- name: Ensure package are available
+  package:
+    name: "{{ wg_packages }}"
+    state: present
+
+- name: Ensure wireguard configuration file is available
+  template:
+    src: config.conf.j2
+    dest: "{{ wg_config_file }}"
+    mode: "0640"
+    owner: root
+    group: root
+
+- name: stat kernel debug file
+  stat:
+    path: "{{ wg_kernel_debug_control_file }}"
+  register: ddbg
+
+# This does NOT work on raspbian: https://github.com/raspberrypi/linux/issues/3486
+- name: Ensure logging is enabled in systemd unit
+  ini_file:
+    path: /usr/lib/systemd/system/wg-quick@.service
+    mode: 0644
+    section: Service
+    option: ExecStartPost
+    value: /bin/bash -c "echo module wireguard +p > {{ wg_kernel_debug_control_file }}"
+    no_extra_spaces: true
+  tags: wg
+  notify: wireguard_restart
+  when: ddbg.stat.exists
+
+- name: Ensure wireguard is started and enabled
+  systemd:
+    name: "wg-quick@{{ wg_interface }}"
+    state: started
+    enabled: true
+
+- name: Display client configuration profiles as QR codes
+  debug:
+    msg: "{{ lookup('pipe', 'echo ' ~ lookup('ansible.builtin.template', 'client.j2') | quote ~ '| qrencode -t utf8i') }}"
+  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
+  loop_control:
+    extended: true
+    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
+    index_var: idx
+  vars:
+    i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
+  tags: wg,qr,clients
