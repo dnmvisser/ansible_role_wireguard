@@ -1,5 +1,5 @@
 [Interface]
-Address = {{ wg_tunnel_ipv4_prefix | ipaddr(i) | ipaddr('address') }}/32,{{ wg_tunnel_ipv6_prefix | ipaddr(i)|ipaddr('address') }}/128
+Address = {{ wg_tunnel_prefix_ipv4 | ipaddr(i) | ipaddr('address') }}/32,{{ wg_tunnel_prefix_ipv6 | ipaddr(i)|ipaddr('address') }}/128
 PrivateKey = {{ item[0].private_key }}
 DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
@@ -8,4 +8,3 @@ PresharedKey = {{ item[0].preshared_key }}
 # Hardcode the IPv4 address so we are not dependent on possibly flakey/rogue local resolvers
 Endpoint = {{ wg_hostname }}:{{ wg_port }}
 AllowedIPs = {{ item[1].allowedips | join(',') }}
-

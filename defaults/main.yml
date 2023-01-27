@@ -13,9 +13,9 @@ wg_config_file: "{{ wg_config_dir }}/{{ wg_iface }}.conf"
 
 # The first IP will be the server's addresses
 # All subsuquent IPs will be for clients
-wg_tunnel_ipv4_prefix: 10.99.99.0/24
-wg_tunnel_ipv6_prefix: fd99:9999::/64
-wg_resolver: "{{ wg_tunnel_ipv6_prefix | ipaddr(1) }}"  # the server's tunnel IP
+wg_tunnel_prefix_ipv4: 10.99.99.0/24
+wg_tunnel_prefix_ipv6: fd99:9999::/64
+wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ipaddr(1) }}"  # the server's tunnel IP
 
 # Generate this by running:
 # privkey=$(wg genkey); echo "Private key: $privkey"; pubkey=$(echo $privkey | wg pubkey); echo "Public key:  $pubkey"
