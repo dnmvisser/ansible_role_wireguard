@@ -15,7 +15,7 @@ wg_config_file: "{{ wg_config_dir }}/{{ wg_iface }}.conf"
 # All subsuquent IPs will be for clients
 wg_tunnel_prefix_ipv4: 10.99.99.0/24
 wg_tunnel_prefix_ipv6: fd99:9999::/64
-wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ipaddr(1) }}"  # the server's tunnel IP
+wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ipaddr(1) | ipaddr('address') }}"  # the server's tunnel IP
 
 # Generate this by running:
 # privkey=$(wg genkey); echo "Private key: $privkey"; pubkey=$(echo $privkey | wg pubkey); echo "Public key:  $pubkey"
@@ -35,6 +35,8 @@ wg_client_tunnel_flavors:
     allowedips:
       - "{{ wg_uplink_prefix_ipv4 }}"
       - "{{ wg_uplink_prefix_ipv6 }}"
+      - "{{ wg_tunnel_prefix_ipv4 }}"
+      - "{{ wg_tunnel_prefix_ipv6 }}"
 
 wg_clients: []
 # wg_clients:
@@ -47,4 +49,5 @@ wg_clients: []
 #     public_key: asdfasdf
 #     preshared_key: fasdfasfd
 
-
+# flag to enable echoing clear text client profiles (in addition to QR codes)
+wg_debug_client_config: false

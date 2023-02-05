@@ -56,3 +56,16 @@
   vars:
     i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
   tags: wg,qr,clients
+
+- name: Display client configuration profiles as PLAIN TEXT
+  debug:
+    msg: "{{ lookup('ansible.builtin.template', 'client.j2') }}"
+  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
+  loop_control:
+    extended: true
+    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
+    index_var: idx
+  vars:
+    i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
+  tags: wg,qr,clients
+  when: wg_debug_client_config
