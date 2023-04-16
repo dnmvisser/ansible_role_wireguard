@@ -2,8 +2,8 @@
 wg_uplink_iface: "{{ ansible_default_ipv4.interface }}"
 wg_uplink_addresses: "{{ ansible_facts[wg_uplink_iface].ipv6|selectattr('scope','eq','global')|map(attribute='address') | union(
   [ansible_facts[uplink_iface].ipv4.address]) }}"
-wg_uplink_prefix_ipv4: "{{ (ansible_facts[wg_uplink_iface].ipv4.network~'/'~ansible_facts[wg_uplink_iface].ipv4.netmask)|ipaddr('net') }}"
-wg_uplink_prefix_ipv6: "{{ (ansible_facts[wg_uplink_iface].ipv6[0].address~'/48')|ipaddr('network/prefix') }}"
+wg_uplink_prefix_ipv4: "{{ (ansible_facts[wg_uplink_iface].ipv4.network~'/'~ansible_facts[wg_uplink_iface].ipv4.netmask)|ansible.utils.ipaddr('net') }}"
+wg_uplink_prefix_ipv6: "{{ (ansible_facts[wg_uplink_iface].ipv6[0].address~'/48')|ansible.utils.ipaddr('network/prefix') }}"
 
 wg_iface: wg0
 wg_port: 51820
@@ -15,7 +15,7 @@ wg_config_file: "{{ wg_config_dir }}/{{ wg_iface }}.conf"
 # All subsuquent IPs will be for clients
 wg_tunnel_prefix_ipv4: 10.99.99.0/24
 wg_tunnel_prefix_ipv6: fd99:9999::/64
-wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ipaddr(1) | ipaddr('address') }}"  # the server's tunnel IP
+wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(1) | ansible.utils.ipaddr('address') }}"  # the server's tunnel IP
 
 # Generate this by running:
 # privkey=$(wg genkey); echo "Private key: $privkey"; pubkey=$(echo $privkey | wg pubkey); echo "Public key:  $pubkey"

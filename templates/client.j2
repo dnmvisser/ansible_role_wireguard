@@ -1,5 +1,5 @@
 [Interface]
-Address = {{ wg_tunnel_prefix_ipv4 | ipaddr(i) | ipaddr('address') }}/32,{{ wg_tunnel_prefix_ipv6 | ipaddr(i)|ipaddr('address') }}/128
+Address = {{ wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') }}/32,{{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(i)|ansible.utils.ipaddr('address') }}/128
 PrivateKey = {{ item[0].private_key }}
 DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
