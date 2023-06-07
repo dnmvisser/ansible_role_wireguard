@@ -7,7 +7,9 @@ Ansible role to install and configure a wireguard server on Debian flavor OSes
 The bootstrap the configuration, you will need the `wg` command to generate the
 various keys. This command comes with the `wireguard` package. It's easiest to
 first install that manually on the target host, and generate the keys/config on
-there.
+there (this is a one time effort).
+
+The `qrencode` command/package is required on the ansible control node.
 
 # Example playbooks
 
@@ -64,3 +66,14 @@ there.
       ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface }} -j MASQUERADE
 ```
 
+Deploying this will create two profiles for each client:
+
+* `all` - tunnel all traffic
+* `split` - tunnel only traffic for the local IP prefix of the wireguard server.
+  In this scenario you will use the tunnel to reach resources at home. See the
+  `wg_client_tunnel_flavors` list on how to configure that.
+
+  During deployment all the profile will be echoed as QR code, so that you can
+  scan them with your android/iOS device. The client profile will NOT be stored
+  anywhere on the server. If you do need to see the profiles, supply the
+  `wg_debug_client_config` flag as `true`.
