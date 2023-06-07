@@ -73,7 +73,7 @@ Deploying this will create two profiles for each client:
   In this scenario you will use the tunnel to reach resources at home. See the
   `wg_client_tunnel_flavors` list on how to configure that.
 
-  During deployment all the profile will be echoed as QR code, so that you can
-  scan them with your android/iOS device. The client profile will NOT be stored
-  anywhere on the server. If you do need to see the profiles, supply the
+  During deployment all the profiles will be echoed as QR codes, so that you can
+  scan one with your android/iOS device. The client profiles will NOT be stored
+  anywhere on the server. If you do need to see them as text, supply the
   `wg_debug_client_config` flag as `true`.
