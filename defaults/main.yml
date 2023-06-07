@@ -7,7 +7,7 @@ wg_uplink_prefix_ipv6: "{{ (ansible_facts[wg_uplink_iface].ipv6[0].address~'/48'
 
 wg_iface: wg0
 wg_port: 51820
-wg_hostname: vpn.foo.bar  # this is what clients connect to
+wg_hostname: vpn.foo.bar  # this is what clients will connect to
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_iface }}.conf"
 
@@ -17,10 +17,11 @@ wg_tunnel_prefix_ipv4: 10.99.99.0/24
 wg_tunnel_prefix_ipv6: fd99:9999::/64
 wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(1) | ansible.utils.ipaddr('address') }}"  # the server's tunnel IP
 
-# Generate this by running:
-# privkey=$(wg genkey); echo "Private key: $privkey"; pubkey=$(echo $privkey | wg pubkey); echo "Public key:  $pubkey"
-#wg_private_key: ....
-#wg_public_key: ....
+# Generate this a combo by running this on the target host:
+# privkey=$(wg genkey); echo -e "wg_private_key: $privkey\nwg_public_key:  $(echo $privkey | wg pubkey)"
+
+# wg_private_key: ....
+# wg_public_key: ....  # store this in a vaulted file
 
 wg_dns_search_domains: []
 # wg_dns_search_domains:
@@ -38,16 +39,21 @@ wg_client_tunnel_flavors:
       - "{{ wg_tunnel_prefix_ipv4 }}"
       - "{{ wg_tunnel_prefix_ipv6 }}"
 
-wg_clients: []
+wg_clients: [] # store this in a vaulted file
+# Create clients by running the gen_wg_client.sh script on the target host:
+#
+# for user in henk frank rob; do ./gen_wg_client.sh $user; done
+#
 # wg_clients:
 #   - name: frank
-#     private_key: dsfasdf
-#     public_key: asdfasdf
-#     preshared_key: fasdfasfd
+#     private_key: AJR2+FWfu9jAZP8Qid/VYNjNg7spAUlr+AEM61yaCGU=
+#     public_key: GmlrAFIfkcMGGQYvbhuybAt+VWUBiOwPEYuhMSiHrFk=
+#     preshared_key: oXDVOu3jaPzNfouGAwdEs7jUsxLADwewJajxTT8OO0w=
 #   - name: rob
-#     private_key: dsfasdf
-#     public_key: asdfasdf
-#     preshared_key: fasdfasfd
+#     private_key: kBevVm7PLDv8B/6fIkMyum3GRNVuPEKcF9AzLYDyvUk=
+#     public_key: F4joswDoZ7drGMfKQj/dbL99OmFcO3ON6XloMgl8CRM=
+#     preshared_key: ys31MzmYAPpbVwHcKxI8fHE9i399GisuXJri3Jb6KKM=
 
-# flag to enable echoing clear text client profiles (in addition to QR codes)
+# Enable echoing clear text client profiles during deployment
+# (in addition to QR codes)
 wg_debug_client_config: false
