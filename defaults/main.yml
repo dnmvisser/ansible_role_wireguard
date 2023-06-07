@@ -40,19 +40,23 @@ wg_client_tunnel_flavors:
       - "{{ wg_tunnel_prefix_ipv6 }}"
 
 wg_clients: [] # store this in a vaulted file
-# Create clients by running the gen_wg_client.sh script on the target host:
+# Create clients by running the gen_wg_client.sh script:
 #
 # for user in henk frank rob; do ./gen_wg_client.sh $user; done
 #
 # wg_clients:
+#   - name: henk
+#     private_key: CFfO/LLB22RA+TMaEDLV4NJKf4SAz4VAGsH/2Lkrv2E=
+#     wg_public_key: dr79XUUKH7kiaDs1k8eJjgeHKzzvwjh3sP9+DHruFRE=
+#     preshared_key: VKousrfIMfCWPDETsB1PaFUQ0P/44p4Y5r1uPE1y+Gs=
 #   - name: frank
-#     private_key: AJR2+FWfu9jAZP8Qid/VYNjNg7spAUlr+AEM61yaCGU=
-#     public_key: GmlrAFIfkcMGGQYvbhuybAt+VWUBiOwPEYuhMSiHrFk=
-#     preshared_key: oXDVOu3jaPzNfouGAwdEs7jUsxLADwewJajxTT8OO0w=
+#     private_key: ED18vIO0we8H4wpW3jloCY1SH0dA7SBXGaC964hPd0E=
+#     wg_public_key: 0W93NJcL5LTTXur7LmVwyswp6NdIotKcxy+mz6y3BUg=
+#     preshared_key: k18pJAaQU7WruAapsji+8RWwTNVj8Vn81qDPithr2kM=
 #   - name: rob
-#     private_key: kBevVm7PLDv8B/6fIkMyum3GRNVuPEKcF9AzLYDyvUk=
-#     public_key: F4joswDoZ7drGMfKQj/dbL99OmFcO3ON6XloMgl8CRM=
-#     preshared_key: ys31MzmYAPpbVwHcKxI8fHE9i399GisuXJri3Jb6KKM=
+#     private_key: 8AjD3LnXypjJH+V17CdGIo5Py505Ua8tLxNLMl/0pUY=
+#     wg_public_key: a8HyYDnc2qnAoi5Y3rk1wNIxhxmvlnoIIe9Hs946AjE=
+#     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
 
 # Enable echoing clear text client profiles during deployment
 # (in addition to QR codes)
