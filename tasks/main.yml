@@ -8,7 +8,7 @@
     - net.ipv4.ip_forward
     - net.ipv6.conf.all.forwarding
 
-- name: Ensure package are available
+- name: Ensure packages are available
   package:
     name: "{{ wg_packages }}"
     state: present
