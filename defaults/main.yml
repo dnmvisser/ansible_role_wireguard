@@ -61,3 +61,6 @@ wg_clients: [] # store this in a vaulted file
 # Enable echoing clear text client profiles during deployment
 # (in addition to QR codes)
 wg_debug_client_config: false
+
+# emit only required information
+stealth_mode: false

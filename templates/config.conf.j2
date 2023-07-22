@@ -1,18 +1,23 @@
+{% if stealth_mode %}
 # {{ ansible_managed }}
+{% endif %}
 [Interface]
 Address = {{ wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('1') }},{{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('1') }}
 ListenPort = {{ wg_port }}
 PrivateKey = {{ wg_private_key }}
+{% if stealth_mode %}
 # public key = {{ wg_public_key }}
+{% endif %}
 {% if wg_postup is defined %}
 PostUp = {{ wg_postup }}
 {% endif %}
 {% if wg_postdown is defined %}
 PostDown = {{ wg_postdown }}
 {% endif %}
-
 {% for client in wg_clients %}
+{% if stealth_mode %}
 # {{ client.name }}
+{% endif %}
 [Peer]
 PublicKey = {{ client.public_key }}
 PresharedKey = {{ client.preshared_key }}
