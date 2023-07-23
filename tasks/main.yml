@@ -45,27 +45,56 @@
     state: started
     enabled: true
 
+- name: build list of client configuration profiles
+  set_fact:
+    profiles: "{{ profiles| default([]) | union([
+      {
+        'config': lookup('ansible.builtin.template', 'client.j2'),
+        'name': item[0].name,
+        'tunnel': item[1].tunnel
+      }
+      ]) }}"
+  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
+  loop_control:
+    extended: true
+    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
+    index_var: idx
+  vars:
+    i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
+  tags: wg_build_profiles
+
 - name: Display client configuration profiles as QR codes
   debug:
-    msg: "{{ lookup('pipe', 'echo ' ~ lookup('ansible.builtin.template', 'client.j2') | quote ~ '| qrencode -t utf8i') }}"
-  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
+    msg: "{{ lookup('pipe', 'echo ' ~ profile.config | quote ~ '| qrencode -t utf8i') }}"
+  loop: "{{ profiles }}"
   loop_control:
-    extended: true
-    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
-    index_var: idx
-  vars:
-    i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
-  tags: wg,qr,clients
+    loop_var: profile
+    label: "{{ profile.name }}_{{ profile.tunnel }}"
+  tags: wg_build_profiles
 
-- name: Display client configuration profiles as PLAIN TEXT
-  debug:
-    msg: "{{ lookup('ansible.builtin.template', 'client.j2') }}"
-  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
+- name: Ensure export sub directory is available per user
+  ansible.builtin.file:
+    path: "{{ wg_export_dir }}/{{ profile.name }}"
+    state: directory
+    mode: 0700
+  tags: never,wg_build_profiles
+  run_once: true
+  loop: "{{ profiles }}"
   loop_control:
-    extended: true
-    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
-    index_var: idx
-  vars:
-    i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
-  tags: wg,qr,clients
-  when: wg_debug_client_config
+    loop_var: profile
+    label: "{{ wg_export_dir }}/{{ profile.name }}"
+  delegate_to: localhost
+  become: false
+
+- name: Export user's client profiles
+  copy:
+    content: "{{ profile.config }}"
+    dest: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.name }}_{{ profile.tunnel }}.conf"
+    mode: 0400
+  loop: "{{ profiles }}"
+  loop_control:
+    loop_var: profile
+    label: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.name }}_{{ profile.tunnel }}.conf"
+  delegate_to: localhost
+  become: false
+  tags: never,wg_build_profiles

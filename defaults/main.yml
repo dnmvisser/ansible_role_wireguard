@@ -7,7 +7,13 @@ wg_uplink_prefix_ipv6: "{{ (ansible_facts[wg_uplink_iface].ipv6[0].address~'/48'
 
 wg_iface: wg0
 wg_port: 51820
-wg_hostname: vpn.foo.bar  # this is what clients will connect to
+wg_hostname: vpn.foo.bar  # this is what clients will connect to. FIXME should default to ansible_fqdn
+# Resolv wg_hostname and use the IP address in client profiles.
+# This avoids issues with possibly rogue/flakey local DNS resolvers.
+wg_use_hardcoded_endpoint: true  # the client profile
+wg_use_hardcoded_endpoint_family: ipv4
+
+
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_iface }}.conf"
 
