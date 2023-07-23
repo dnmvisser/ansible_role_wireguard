@@ -46,7 +46,7 @@ wg_client_tunnel_flavors:
       - "{{ wg_tunnel_prefix_ipv6 }}"
 
 # Set to 0 or false to disable this in the [Peer] section
-peer_persistentkeepalive: 0
+peer_persistentkeepalive: 10
 
 wg_clients: [] # store this in a vaulted file
 # Create clients by running the gen_wg_client.sh script:
