@@ -89,12 +89,12 @@
 - name: Export user's client profiles
   copy:
     content: "{{ profile.config }}"
-    dest: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.name }}_{{ profile.tunnel }}.conf"
+    dest: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
     mode: 0400
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile
-    label: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.name }}_{{ profile.tunnel }}.conf"
+    label: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
   delegate_to: localhost
   become: false
   tags: never,wg_build_profiles

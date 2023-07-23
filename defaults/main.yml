@@ -34,7 +34,7 @@ wg_dns_search_domains: []
 #   - foo.bar
 
 wg_client_tunnel_flavors:
-  - tunnel: all
+  - tunnel: full
     allowedips:
       - '0.0.0.0/0'
       - '::/0'
@@ -44,6 +44,9 @@ wg_client_tunnel_flavors:
       - "{{ wg_uplink_prefix_ipv6 }}"
       - "{{ wg_tunnel_prefix_ipv4 }}"
       - "{{ wg_tunnel_prefix_ipv6 }}"
+
+# Set to 0 or false to disable this in the [Peer] section
+peer_persistentkeepalive: 0
 
 wg_clients: [] # store this in a vaulted file
 # Create clients by running the gen_wg_client.sh script:
