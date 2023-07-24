@@ -41,11 +41,12 @@
 
 - name: Ensure wireguard is started and enabled
   systemd:
-    name: "wg-quick@{{ wg_iface }}"
+    name: "wg-quick@{{ wg_tunnel_iface }}"
     state: started
     enabled: true
 
-- name: build list of client configuration profiles
+- name: Build list of client configuration profiles
+  # To be used later to display as QR, or to create a ZIP file
   set_fact:
     profiles: "{{ profiles| default([]) | union([
       {
@@ -61,7 +62,6 @@
     index_var: idx
   vars:
     i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
-  tags: wg_build_profiles
 
 - name: Display client configuration profiles as QR codes
   debug:
@@ -70,31 +70,31 @@
   loop_control:
     loop_var: profile
     label: "{{ profile.name }}_{{ profile.tunnel }}"
-  tags: wg_build_profiles
+  when: wg_diplay_profiles
 
 - name: Ensure export sub directory is available per user
   ansible.builtin.file:
-    path: "{{ wg_export_dir }}/{{ profile.name }}"
+    path: "{{ wg_export_profiles_dir }}/{{ profile.name }}"
     state: directory
     mode: 0700
-  tags: never,wg_build_profiles
   run_once: true
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile
-    label: "{{ wg_export_dir }}/{{ profile.name }}"
+    label: "{{ wg_export_profiles_dir }}/{{ profile.name }}"
   delegate_to: localhost
   become: false
+  when: wg_export_profiles
 
 - name: Export user's client profiles
   copy:
     content: "{{ profile.config }}"
-    dest: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
+    dest: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
     mode: 0400
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile
-    label: "{{ wg_export_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
+    label: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
   delegate_to: localhost
   become: false
-  tags: never,wg_build_profiles
+  when: wg_export_profiles

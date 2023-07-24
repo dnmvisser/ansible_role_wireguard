@@ -2,7 +2,7 @@
 # {{ ansible_managed }}
 {% endif %}
 [Interface]
-Address = {{ wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('1') }},{{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('1') }}
+Address = {{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('1') }},{{ wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('1') }}
 ListenPort = {{ wg_port }}
 PrivateKey = {{ wg_private_key }}
 {% if not stealth_mode %}

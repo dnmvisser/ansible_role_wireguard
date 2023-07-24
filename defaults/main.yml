@@ -1,29 +1,28 @@
 ---
-wg_uplink_iface: "{{ ansible_default_ipv4.interface }}"
-wg_uplink_addresses: "{{ ansible_facts[wg_uplink_iface].ipv6|selectattr('scope','eq','global')|map(attribute='address') | union(
-  [ansible_facts[uplink_iface].ipv4.address]) }}"
-wg_uplink_prefix_ipv4: "{{ (ansible_facts[wg_uplink_iface].ipv4.network~'/'~ansible_facts[wg_uplink_iface].ipv4.netmask)|ansible.utils.ipaddr('net') }}"
-wg_uplink_prefix_ipv6: "{{ (ansible_facts[wg_uplink_iface].ipv6[0].address~'/48')|ansible.utils.ipaddr('network/prefix') }}"
+wg_uplink_iface_ipv6: "{{ ansible_default_ipv6.interface }}"
+wg_uplink_iface_ipv4: "{{ ansible_default_ipv4.interface }}"
+wg_uplink_prefix_ipv6: "{{ ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix | ansible.utils.ipaddr('network/prefix') }}"
+wg_uplink_prefix_ipv4: "{{ ansible_default_ipv4.network ~ '/' ~ ansible_default_ipv4.prefix }}"
+wg_uplink_addresses: "{{ [ ansible_default_ipv6.address, ansible_default_ipv4.address] }}"
 
-wg_iface: wg0
+wg_tunnel_iface: wg0
 wg_port: 51820
-wg_hostname: vpn.foo.bar  # this is what clients will connect to. FIXME should default to ansible_fqdn
-# Resolv wg_hostname and use the IP address in client profiles.
-# This avoids issues with possibly rogue/flakey local DNS resolvers.
-wg_use_hardcoded_endpoint: true  # the client profile
-wg_use_hardcoded_endpoint_family: ipv4
 
-
-wg_config_dir: /etc/wireguard
-wg_config_file: "{{ wg_config_dir }}/{{ wg_iface }}.conf"
-
-# The first IP will be the server's addresses
+# The first IP addresses of these prefixes will be the server's addresses
 # All subsuquent IPs will be for clients
-wg_tunnel_prefix_ipv4: 10.99.99.0/24
 wg_tunnel_prefix_ipv6: fd99:9999::/64
+wg_tunnel_prefix_ipv4: 10.99.99.0/24
+
+# FIXME do we need an IPv4 resolver as well? Does wireguard even support multiple resolvers?
 wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(1) | ansible.utils.ipaddr('address') }}"  # the server's tunnel IP
 
-# Generate this a combo by running this on the target host:
+wg_hostname: vpn.foo.bar  # What clients will be connecting to
+wg_name: "{{ wg_hostname }}"  # How the server is named in client apps
+
+wg_config_dir: /etc/wireguard
+wg_config_file: "{{ wg_config_dir }}/{{ wg_tunnel_iface }}.conf"
+
+# Generate this combo by running this on the target host:
 # privkey=$(wg genkey); echo -e "wg_private_key: $privkey\nwg_public_key:  $(echo $privkey | wg pubkey)"
 
 # wg_private_key: ....
@@ -67,9 +66,13 @@ wg_clients: [] # store this in a vaulted file
 #     wg_public_key: a8HyYDnc2qnAoi5Y3rk1wNIxhxmvlnoIIe9Hs946AjE=
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
 
-# Enable echoing clear text client profiles during deployment
-# (in addition to QR codes)
-wg_debug_client_config: false
+# Display client profiles as QR codes
+wg_diplay_profiles: false
+
+# Whether to export all profiles to a local ZIP file
+# Also needs to set the path to it
+wg_export_profiles: false
+wg_export_profiles_dir: ~/tmp/foo
 
 # emit only required information
 stealth_mode: false
