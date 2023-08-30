@@ -1,6 +1,6 @@
 ---
 - name: Ensure IP forwarding is enabled
-  sysctl:
+  ansible.posix.sysctl:
     name: "{{ item }}"
     value: '1'
     state: present
@@ -9,12 +9,12 @@
     - net.ipv6.conf.all.forwarding
 
 - name: Ensure packages are available
-  package:
+  ansible.builtin.package:
     name: "{{ wg_packages }}"
     state: present
 
 - name: Ensure wireguard configuration file is available
-  template:
+ ansible.builtin.template:
     src: config.conf.j2
     dest: "{{ wg_config_file }}"
     mode: "0640"
@@ -22,32 +22,40 @@
     group: root
 
 - name: stat kernel debug file
-  stat:
+  ansible.builtin.stat:
     path: "{{ wg_kernel_debug_control_file }}"
   register: ddbg
 
+- name: Ensure systemd service override directory is available
+  ansible.builtin.file:
+    path: /etc/systemd/system/wg-quick@.service.d
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  when: ddbg.stat.exists
+
 # This does NOT work on raspbian: https://github.com/raspberrypi/linux/issues/3486
 - name: Ensure logging is enabled in systemd unit
-  ini_file:
-    path: /usr/lib/systemd/system/wg-quick@.service
+  ansible.builtin.copy:
+    dest: /usr/lib/systemd/system/wg-quick@.service
     mode: 0644
-    section: Service
-    option: ExecStartPost
-    value: /bin/bash -c "echo module wireguard +p > {{ wg_kernel_debug_control_file }}"
-    no_extra_spaces: true
+    content: |
+      [Service]
+      ExecStartPost=/bin/bash -c "echo module wireguard +p > {{ wg_kernel_debug_control_file }}"
   tags: wg
   notify: wireguard_restart
   when: ddbg.stat.exists
 
 - name: Ensure wireguard is started and enabled
-  systemd:
+  ansible.builtin.systemd:
     name: "wg-quick@{{ wg_tunnel_iface }}"
     state: started
     enabled: true
 
 - name: Build list of client configuration profiles
   # To be used later to display as QR, or to create a ZIP file
-  set_fact:
+  ansible.builtin.set_fact:
     profiles: "{{ profiles| default([]) | union([
       {
         'config': lookup('ansible.builtin.template', 'client.j2'),
@@ -64,7 +72,7 @@
     i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
 
 - name: Display client configuration profiles as QR codes
-  debug:
+  ansible.builtin.debug:
     msg: "{{ lookup('pipe', 'echo ' ~ profile.config | quote ~ '| qrencode -t utf8i') }}"
   loop: "{{ profiles }}"
   loop_control:
@@ -87,7 +95,7 @@
   when: wg_export_profiles
 
 - name: Export user's client profiles
-  copy:
+  ansible.builtin.copy:
     content: "{{ profile.config }}"
     dest: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
     mode: 0400

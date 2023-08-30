@@ -1,7 +1,7 @@
 ---
 wg_uplink_iface_ipv6: "{{ ansible_default_ipv6.interface }}"
 wg_uplink_iface_ipv4: "{{ ansible_default_ipv4.interface }}"
-wg_uplink_prefix_ipv6: "{{ ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix | ansible.utils.ipaddr('network/prefix') }}"
+wg_uplink_prefix_ipv6: "{{ (ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix) | ansible.utils.ipaddr('network/prefix') }}"
 wg_uplink_prefix_ipv4: "{{ ansible_default_ipv4.network ~ '/' ~ ansible_default_ipv4.prefix }}"
 wg_uplink_addresses: "{{ [ ansible_default_ipv6.address, ansible_default_ipv4.address] }}"
 
