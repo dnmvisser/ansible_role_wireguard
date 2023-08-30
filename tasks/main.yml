@@ -28,14 +28,13 @@
 
 - name: Ensure systemd unit file is overriden/available
   ansible.builtin.template:
-    src: system_unit.j2
-    path: /etc/systemd/system/wg-quick@.service
+    src: systemd_unit.j2
+    dest: /etc/systemd/system/wg-quick@.service
     mode: 0644
-    onwer: root
+    owner: root
     group: root
   tags: wg
   notify: wireguard_restart
-  when: ddbg.stat.exists
 
 - name: Ensure wireguard is started and enabled
   systemd:
