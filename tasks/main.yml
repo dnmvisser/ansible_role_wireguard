@@ -26,18 +26,15 @@
     path: "{{ wg_kernel_debug_control_file }}"
   register: ddbg
 
-# This does NOT work on raspbian: https://github.com/raspberrypi/linux/issues/3486
-- name: Ensure logging is enabled in systemd unit
-  ini_file:
-    path: /usr/lib/systemd/system/wg-quick@.service
+- name: Ensure systemd unit file is overriden/available
+  ansible.builtin.template:
+    src: systemd_unit.j2
+    dest: /etc/systemd/system/wg-quick@.service
     mode: 0644
-    section: Service
-    option: ExecStartPost
-    value: /bin/bash -c "echo module wireguard +p > {{ wg_kernel_debug_control_file }}"
-    no_extra_spaces: true
+    owner: root
+    group: root
   tags: wg
   notify: wireguard_restart
-  when: ddbg.stat.exists
 
 - name: Ensure wireguard is started and enabled
   systemd:
