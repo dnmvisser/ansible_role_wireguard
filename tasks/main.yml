@@ -59,6 +59,7 @@
     index_var: idx
   vars:
     i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
+  tags: client_profiles
 
 - name: Display client configuration profiles as QR codes
   debug:
@@ -82,6 +83,7 @@
   delegate_to: localhost
   become: false
   when: wg_export_profiles
+  tags: client_profiles
 
 - name: Export user's client profiles
   copy:
@@ -95,3 +97,4 @@
   delegate_to: localhost
   become: false
   when: wg_export_profiles
+  tags: client_profiles
