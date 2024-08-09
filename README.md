@@ -40,15 +40,15 @@ The `qrencode` command/package is required on the ansible control node.
       # for user in henk frank rob; do ./gen_wg_client.sh $user; done
       - name: henk
         private_key: 0PkVWoVzebEQk6qVDMYmr5P3ZSgWwlWapht0QhrxtXg=
-        wg_public_key: fj5+XU9w455S4NLhSvSYbDJWNE4j5PaWkQO43u7Mlxk=
+        public_key: fj5+XU9w455S4NLhSvSYbDJWNE4j5PaWkQO43u7Mlxk=
         preshared_key: GiOfhMycS77weMZZcq4x95rc9cXkpMvpRskA4fDr+9M=
       - name: frank
         private_key: aNS7ZHiPWtL9lHCCeGSvwb1llxl+TeeaJvpXLXGzEF4=
-        wg_public_key: YjCe3Vxdsle/Z3igCwLtat3vf/NNub/IaJE432gSNCc=
+        public_key: YjCe3Vxdsle/Z3igCwLtat3vf/NNub/IaJE432gSNCc=
         preshared_key: t6g+i6NFkuFJnTWUJf3abXsq3ptNc2JcpYquj08U+K4=
       - name: rob
         private_key: aEO9GjsfXDZCU/BapQuwuq4OIvIxZS52Lr0u6itSsm0=
-        wg_public_key: /IyJzlqI+WAmaYxeD9K5UIneRflFDJaDD1zFn1LUU2M=
+        public_key: /IyJzlqI+WAmaYxeD9K5UIneRflFDJaDD1zFn1LUU2M=
         preshared_key: qBb0oVL2TVOxvNFiaErDctoCRsEhQwJDFfTkfHKoWb4=
 
     wg_postup: >-

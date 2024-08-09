@@ -7,5 +7,5 @@ fi
 private_key=$(wg genkey)
 echo "- name: $1
   private_key: $private_key
-  wg_public_key: $(echo $private_key | wg pubkey)
+  public_key: $(echo $private_key | wg pubkey)
   preshared_key: $(wg genpsk)"
