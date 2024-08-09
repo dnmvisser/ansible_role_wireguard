@@ -1,12 +1,15 @@
 ---
+# - debug: var=wg_client_tunnel_flavors
+# - debug: var=wg_postdown
+# - debug: var=wg_ipv6_enable|bool
+# - meta: end_play
+
 - name: Ensure IP forwarding is enabled
   sysctl:
     name: "{{ item }}"
     value: '1'
     state: present
-  loop:
-    - net.ipv4.ip_forward
-    - net.ipv6.conf.all.forwarding
+  loop: "{{ ['net.ipv4.ip_forward'] | union(wg_ipv6_enable|bool|ternary(['net.ipv6.conf.all.forwarding'], [])) }}"
 
 - name: Ensure packages are available
   package:
@@ -20,6 +23,7 @@
     mode: "0640"
     owner: root
     group: root
+  notify: wireguard_restart
 
 - name: stat kernel debug file
   stat:
