@@ -2,7 +2,7 @@
 Address = {{
   ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable | bool else []) | union(
   ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable | bool else [])) |
-  ansible.utils.ipaddr | join(',')
+  sort(reverse=True) | ansible.utils.ipaddr | join(',')
 }}
 PrivateKey = {{ item[0].private_key }}
 DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
