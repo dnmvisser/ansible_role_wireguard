@@ -1,27 +1,27 @@
 ---
-ansible_default_ipv6: {}
-ansible_default_ipv4: {}
+# ansible_default_ipv6: {}
+# ansible_default_ipv4: {}
 
 # By default we enable an IP protocol if there is a default configuration
 # for it on the host. You can override this to explicitly disable a protocol.
 # Because there are two protocols, and you have to have at least one,
 # there are three valid combinations: IPv4+IPv6, IPv4 only, or IPv6 only.
-wg_ipv6_enable: "{{ (ansible_default_ipv6 | length > 0) }}"
-wg_ipv4_enable: "{{ (ansible_default_ipv4 | length > 0) }}"
+wg_ipv6_enable: "{{ ansible_all_ipv6_addresses | length > 0 | bool }}"
+wg_ipv4_enable: "{{ ansible_all_ipv4_addresses | length > 0 | bool }}"
 
 # Establish uplink interface names (eth0, ens3, etc)
-wg_uplink_iface_ipv6: "{{ wg_ipv6_enable | bool | ternary(ansible_default_ipv6.interface, false) }}"
-wg_uplink_iface_ipv4: "{{ wg_ipv4_enable | bool | ternary(ansible_default_ipv4.interface, false) }}"
+wg_uplink_iface_ipv6: "{{ ansible_default_ipv6.interface if wg_ipv6_enable | bool else 'undef' }}"
+wg_uplink_iface_ipv4: "{{ ansible_default_ipv4.interface if wg_ipv4_enable | bool else 'undef' }}"
 
-wg_uplink_prefixes: "{{ [
-    ansible_default_ipv6.address|default(false) ~ '/' ~ ansible_default_ipv6.prefix|default(false),
-    ansible_default_ipv4.address|default(false) ~ '/' ~ ansible_default_ipv4.prefix|default(false)
-  ] | ansible.utils.ipaddr('network/prefix') }}"
+wg_uplink_prefixes: "{{
+  ([ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix] if wg_ipv6_enable | bool else [])  | union(
+  ([ansible_default_ipv4.address ~ '/' ~ ansible_default_ipv4.prefix] if wg_ipv4_enable | bool else [])) | sort(reverse=True) |
+  ansible.utils.ipaddr('network/prefix') }}"
 
-wg_uplink_addresses: "{{ [
-  wg_ipv6_enable|ternary(ansible_default_ipv6.address|default(false),[]),
-  wg_ipv4_enable|ternary(ansible_default_ipv4.address|default(false),[])
-  ] | ansible.utils.ipaddr }}"
+wg_uplink_addresses: "{{
+  ([ansible_default_ipv6.address] if wg_ipv6_enable | bool else []) | union(
+  ([ansible_default_ipv4.address] if wg_ipv4_enable | bool else [])) |
+  ansible.utils.ipaddr | sort(reverse=True) }}"
 
 wg_tunnel_iface: wg0
 wg_port: 51820
@@ -31,16 +31,14 @@ wg_port: 51820
 wg_tunnel_prefix_ipv6: fd99:9999::/64
 wg_tunnel_prefix_ipv4: 10.99.99.0/24
 
-wg_tunnel_addresses: "{{
-  wg_ipv6_enable | bool | ternary([wg_tunnel_prefix_ipv6], []) | union(
-  wg_ipv4_enable | bool | ternary([wg_tunnel_prefix_ipv4], []))  }}"
+wg_tunnel_prefixes: "{{ ([wg_tunnel_prefix_ipv6] if wg_ipv6_enable | bool else []) | union(
+                        ([wg_tunnel_prefix_ipv4] if wg_ipv4_enable | bool else [])) | sort(reverse=True) }}"
 
 # Default: the tunnel server's IP address
-wg_resolver: "{{ wg_tunnel_addresses | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') | first }}"  # the server's tunnel IP
-# wg_resolver: "{{ wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') }}"  # the server's tunnel IP
+wg_resolver: "{{ wg_tunnel_prefixes | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') | first }}"  # the server's tunnel IP
 
 wg_hostname: vpn.foo.bar  # What clients will be connecting to
-wg_name: "{{ wg_hostname }}"  # How the server is named in client apps
+wg_name: "{{ wg_hostname }}"  # How the server name is displayed in client apps
 
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_tunnel_iface }}.conf"
@@ -57,11 +55,12 @@ wg_dns_search_domains: []
 
 wg_client_tunnel_flavors:
   - tunnel: full
-    allowedips: "{{ wg_ipv6_enable|bool|ternary(['::/0'], []) | union(
-                    wg_ipv4_enable|bool|ternary(['0.0.0.0/0'], [])) }}"
+    allowedips: "{{ (['::/0'] if wg_ipv6_enable | bool else []) | union(
+                    (['0.0.0.0/0'] if wg_ipv4_enable | bool else [])) }}"
   - tunnel: split
-    allowedips: "{{ wg_ipv6_enable|bool|ternary([wg_tunnel_prefix_ipv6]|union(wg_uplink_prefixes|ansible.utils.ipv6), []) | union(
-                    wg_ipv4_enable|bool|ternary([wg_tunnel_prefix_ipv4]|union(wg_uplink_prefixes|ansible.utils.ipv4), [])) }}"
+    allowedips: "{{ ([wg_tunnel_prefix_ipv6] | union(wg_uplink_prefixes|ansible.utils.ipv6) if wg_ipv6_enable | bool else []) | union(
+                    ([wg_tunnel_prefix_ipv4] | union(wg_uplink_prefixes|ansible.utils.ipv4) if wg_ipv4_enable | bool else [])) |
+                    sort(reverse=True) }}"
 
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10

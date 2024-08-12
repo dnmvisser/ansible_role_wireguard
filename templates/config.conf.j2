@@ -2,7 +2,7 @@
 # {{ ansible_managed }}
 {% endif %}
 [Interface]
-Address = {{ wg_tunnel_addresses | join(',') }}
+Address = {{ wg_tunnel_prefixes | join(',') }}
 ListenPort = {{ wg_port }}
 PrivateKey = {{ wg_private_key }}
 {% if not stealth_mode %}
@@ -22,8 +22,8 @@ PostDown = {{ wg_postdown }}
 [Peer]
 PublicKey = {{ client.public_key }}
 PresharedKey = {{ client.preshared_key }}
-AllowedIPs = {{ [
- wg_ipv6_enable | bool | ternary(wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/128', []),
- wg_ipv4_enable | bool | ternary(wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/32', [])
- ] | ansible.utils.ipaddr | join(',') }}
+AllowedIPs = {{
+  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable else []) | union(
+  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable else [])) |
+  sort(reverse=True) | ansible.utils.ipaddr | join(',') }}
 {% endfor %}

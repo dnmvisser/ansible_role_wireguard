@@ -1,7 +1,11 @@
 ---
-# - debug: var=wg_client_tunnel_flavors
-# - debug: var=wg_postdown
+# - debug: var=wg_tunnel_prefixes
+# - debug: var=wg_tunnel_prefix_ipv6
+# - debug: var=wg_tunnel_prefix_ipv4
 # - debug: var=wg_ipv6_enable|bool
+# - debug: var=wg_ipv4_enable|bool
+# - debug: var=wg_uplink_prefixes
+# - debug: var=wg_client_tunnel_flavors
 # - meta: end_play
 
 - name: Ensure IP forwarding is enabled
@@ -9,7 +13,8 @@
     name: "{{ item }}"
     value: '1'
     state: present
-  loop: "{{ ['net.ipv4.ip_forward'] | union(wg_ipv6_enable|bool|ternary(['net.ipv6.conf.all.forwarding'], [])) }}"
+  loop: "{{ wg_ipv6_enable | bool | ternary(['net.ipv6.conf.all.forwarding'], []) | union(
+           wg_ipv4_enable | bool | ternary(['net.ipv4.ip_forward'], [])) }}"
 
 - name: Ensure packages are available
   package:

@@ -1,13 +1,14 @@
 [Interface]
-{% set v6 = [ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/128' ] %}
-{% set v4 = [ wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/32' ] %}
-Address = {{ v4 | union(wg_ipv6_enable | bool | ternary(v6, [])) | join(',') }}
+Address = {{
+  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable | bool else []) | union(
+  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable | bool else [])) |
+  ansible.utils.ipaddr | join(',')
+}}
 PrivateKey = {{ item[0].private_key }}
 DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
 PublicKey = {{ wg_public_key }}
 PresharedKey = {{ item[0].preshared_key }}
-# Hardcode the IPv4 address so we are not dependent on possibly flakey/rogue local resolvers
 Endpoint = {{ wg_hostname }}:{{ wg_port }}
 AllowedIPs = {{ item[1].allowedips | join(',') }}
 {% if peer_persistentkeepalive|int > 0 %}
