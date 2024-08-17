@@ -1,23 +1,56 @@
 ---
-wg_uplink_iface_ipv6: "{{ ansible_default_ipv6.interface }}"
-wg_uplink_iface_ipv4: "{{ ansible_default_ipv4.interface }}"
-wg_uplink_prefix_ipv6: "{{ ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix | ansible.utils.ipaddr('network/prefix') }}"
-wg_uplink_prefix_ipv4: "{{ ansible_default_ipv4.network ~ '/' ~ ansible_default_ipv4.prefix }}"
-wg_uplink_addresses: "{{ [ ansible_default_ipv6.address, ansible_default_ipv4.address] }}"
+# By default we enable an IP protocol if there is a default configuration
+# for it on the host. You can override this to explicitly disable a protocol.
+# Because there are two protocols, and you have to have at least one,
+# there are three valid combinations: IPv4+IPv6, IPv4 only, or IPv6 only.
+wg_ipv6_enable: "{{ ansible_default_ipv6 | default({}) | length > 0 | bool }}"
+wg_ipv4_enable: "{{ ansible_default_ipv4 | default({}) | length > 0 | bool }}"
+
+# Establish uplink interface names (eth0, ens3, etc)
+wg_uplink_iface_ipv6: "{{ ansible_default_ipv6.interface if wg_ipv6_enable | bool else 'undef' }}"
+wg_uplink_iface_ipv4: "{{ ansible_default_ipv4.interface if wg_ipv4_enable | bool else 'undef' }}"
+
+wg_uplink_prefixes: "{{
+  ([ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix] if wg_ipv6_enable | bool else []) | union(
+  ([ansible_default_ipv4.address ~ '/' ~ ansible_default_ipv4.prefix] if wg_ipv4_enable | bool else [])) | sort(reverse=True) |
+  ansible.utils.ipaddr('network/prefix') }}"
+
+wg_uplink_addresses: "{{ ([ansible_default_ipv6.address] if wg_ipv6_enable | bool else [])
+  | union(([ansible_default_ipv4.address] if wg_ipv4_enable | bool else []))
+  | ansible.utils.ipaddr | sort(reverse=True) }}"
 
 wg_tunnel_iface: wg0
-wg_port: 51820
+
+# Which port to use on the server
+wg_server_port: 51820
+# Which port to use in client profile. This can be useful in NAT scenarios where
+# you can map a different public port to the internal server. The default is to
+# keep them the same
+wg_public_port: "{{ wg_server_port }}"
 
 # The first IP addresses of these prefixes will be the server's addresses
 # All subsuquent IPs will be for clients
 wg_tunnel_prefix_ipv6: fd99:9999::/64
 wg_tunnel_prefix_ipv4: 10.99.99.0/24
 
-# FIXME do we need an IPv4 resolver as well? Does wireguard even support multiple resolvers?
-wg_resolver: "{{ wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(1) | ansible.utils.ipaddr('address') }}"  # the server's tunnel IP
+wg_tunnel_prefixes: "{{ ([wg_tunnel_prefix_ipv6] if wg_ipv6_enable | bool else []) | union(
+                        ([wg_tunnel_prefix_ipv4] if wg_ipv4_enable | bool else [])) | sort(reverse=True) }}"
+wg_tunnel_addresses: "{{ wg_tunnel_prefixes | map('ansible.utils.ipaddr', '1') }}"
+# Resolver address. This is only relevant for the client profiles.
+# What to pick here depends on the scenario:
+# The server's tunnel IP; when running an Adguard/Pihole/etc resolver on the same host
+# wg_resolver: "{{ wg_tunnel_prefixes | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') | first }}"
+# The server's default resolver; for hosts that are directly connected to the internet
+wg_resolver: "{{ ansible_dns.nameservers[0] }}"
 
-wg_hostname: vpn.foo.bar  # What clients will be connecting to
-wg_name: "{{ wg_hostname }}"  # How the server is named in client apps
+
+# What clients should be connecting to. For systems behind NAT, this is the NAT
+# gateway's public IP address or FQDN. This requires a port to be mapped/forwarded.
+# wg_hostname: vpn.foo.bar
+# For public hosts, you can use the default IP address (default IPv4)
+wg_hostname: "{{ ansible_default_ipv4.address if wg_ipv4_enable | bool else ansible_default_ipv6.address | ansible.utils.ipwrap}}"
+
+wg_name: "{{ wg_hostname }}"  # How the server name is displayed in client apps
 
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_tunnel_iface }}.conf"
@@ -34,15 +67,37 @@ wg_dns_search_domains: []
 
 wg_client_tunnel_flavors:
   - tunnel: full
-    allowedips:
-      - '0.0.0.0/0'
-      - '::/0'
+    allowedips: "{{ (['::/0'] if wg_ipv6_enable | bool else []) | union(
+                    (['0.0.0.0/0'] if wg_ipv4_enable | bool else [])) }}"
   - tunnel: split
-    allowedips:
-      - "{{ wg_uplink_prefix_ipv4 }}"
-      - "{{ wg_uplink_prefix_ipv6 }}"
-      - "{{ wg_tunnel_prefix_ipv4 }}"
-      - "{{ wg_tunnel_prefix_ipv6 }}"
+    allowedips: "{{ ([wg_tunnel_prefix_ipv6] | union(wg_uplink_prefixes|ansible.utils.ipv6) if wg_ipv6_enable | bool else []) | union(
+                    ([wg_tunnel_prefix_ipv4] | union(wg_uplink_prefixes|ansible.utils.ipv4) if wg_ipv4_enable | bool else [])) |
+                    sort(reverse=True) }}"
+
+# These may need tweaking in some scenarios.
+# If you want to avoid having postup/postdown stanza, define them here
+# as an empty string ('')
+wg_postup: >-
+  {% if wg_ipv4_enable | bool -%}
+  iptables -A FORWARD -i {{ wg_uplink_iface_ipv4 }} -o %i -j ACCEPT;
+  iptables -A FORWARD -i %i -j ACCEPT;
+  iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv4 }} -j MASQUERADE;
+  {%- endif %}
+  {% if wg_ipv6_enable | bool -%}
+  ip6tables -A FORWARD -i %i -j ACCEPT;
+  ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv6 }} -j MASQUERADE
+  {%- endif %}
+
+wg_postdown: >-
+  {% if wg_ipv4_enable | bool -%}
+  iptables -D FORWARD -i {{ wg_uplink_iface_ipv4 }} -o %i -j ACCEPT;
+  iptables -D FORWARD -i %i -j ACCEPT;
+  iptables -t nat -D POSTROUTING -o {{ wg_uplink_iface_ipv4 }} -j MASQUERADE;
+  {%- endif %}
+  {% if wg_ipv6_enable | bool -%}
+  ip6tables -D FORWARD -i %i -j ACCEPT;
+  ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface_ipv6 }} -j MASQUERADE
+  {%- endif %}
 
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10
@@ -67,6 +122,7 @@ wg_clients: [] # store this in a vaulted file
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
 
 # Display client profiles as QR codes
+# FIXME document that this requires the yaml output in ansible
 wg_diplay_profiles: false
 
 # Whether to export all profiles to a local ZIP file
@@ -74,5 +130,6 @@ wg_diplay_profiles: false
 wg_export_profiles: false
 wg_export_profiles_dir: ~/tmp/foo
 
-# emit only required information
-stealth_mode: false
+# Emit the minimum amount of information that is required to function properly.
+# Strip out comments, account names, public keys that are not needed, etc.
+wg_stealth_mode: false

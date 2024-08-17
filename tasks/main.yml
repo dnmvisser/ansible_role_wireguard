@@ -1,28 +1,30 @@
 ---
 - name: Ensure IP forwarding is enabled
-  sysctl:
+  ansible.posix.sysctl:
     name: "{{ item }}"
     value: '1'
     state: present
-  loop:
-    - net.ipv4.ip_forward
-    - net.ipv6.conf.all.forwarding
+  loop: "{{ (['net.ipv6.conf.all.forwarding'] if wg_ipv6_enable else []) | union(
+            (['net.ipv4.ip_forward'] if wg_ipv4_enable else [])) }}"
 
 - name: Ensure packages are available
-  package:
+  ansible.builtin.package:
     name: "{{ wg_packages }}"
     state: present
 
 - name: Ensure wireguard configuration file is available
-  template:
+  ansible.builtin.template:
     src: config.conf.j2
     dest: "{{ wg_config_file }}"
+    trim_blocks: true
+    lstrip_blocks: true
     mode: "0640"
     owner: root
     group: root
+  notify: wireguard_restart
 
-- name: stat kernel debug file
-  stat:
+- name: Check for kernel debug file
+  ansible.builtin.stat:
     path: "{{ wg_kernel_debug_control_file }}"
   register: ddbg
 
@@ -30,21 +32,21 @@
   ansible.builtin.template:
     src: systemd_unit.j2
     dest: /etc/systemd/system/wg-quick@.service
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
   tags: wg
   notify: wireguard_restart
 
 - name: Ensure wireguard is started and enabled
-  systemd:
+  ansible.builtin.systemd_service:
     name: "wg-quick@{{ wg_tunnel_iface }}"
     state: started
     enabled: true
 
 - name: Build list of client configuration profiles
   # To be used later to display as QR, or to create a ZIP file
-  set_fact:
+  ansible.builtin.set_fact:
     profiles: "{{ profiles| default([]) | union([
       {
         'config': lookup('ansible.builtin.template', 'client.j2'),
@@ -58,11 +60,11 @@
     label: "{{ item[0].name }}_{{ item[1].tunnel }}"
     index_var: idx
   vars:
-    i: "{{ (idx/2 + 2) | round(0, 'floor') | int }}"
+    i: "{{ (idx / 2 + 2) | round(0, 'floor') | int }}"
   tags: client_profiles
 
 - name: Display client configuration profiles as QR codes
-  debug:
+  ansible.builtin.debug:
     msg: "{{ lookup('pipe', 'echo ' ~ profile.config | quote ~ '| qrencode -t utf8i') }}"
   loop: "{{ profiles }}"
   loop_control:
@@ -74,7 +76,7 @@
   ansible.builtin.file:
     path: "{{ wg_export_profiles_dir }}/{{ profile.name }}"
     state: directory
-    mode: 0700
+    mode: "0700"
   run_once: true
   loop: "{{ profiles }}"
   loop_control:
@@ -86,10 +88,10 @@
   tags: client_profiles
 
 - name: Export user's client profiles
-  copy:
+  ansible.builtin.copy:
     content: "{{ profile.config }}"
     dest: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
-    mode: 0400
+    mode: "0400"
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 if ! command -v wg >/dev/null 2>&1; then
-	echo "There is no 'wg' command available, is wireguard installed?"
-	exit 1
+  echo "There is no 'wg' command available, is wireguard installed?"
+  exit 1
 fi
 
 private_key=$(wg genkey)
