@@ -2,8 +2,8 @@
 # {{ ansible_managed }}
 {% endif %}
 [Interface]
-Address = {{ wg_tunnel_prefixes | join(',') }}
-ListenPort = {{ wg_port }}
+Address = {{ wg_tunnel_addresses | join(',') }}
+ListenPort = {{ wg_server_port }}
 PrivateKey = {{ wg_private_key }}
 {% if not wg_stealth_mode | bool %}
 # public key = {{ wg_public_key }}

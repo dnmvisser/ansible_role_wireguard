@@ -9,7 +9,7 @@ DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
 PublicKey = {{ wg_public_key }}
 PresharedKey = {{ item[0].preshared_key }}
-Endpoint = {{ wg_hostname }}:{{ wg_port }}
+Endpoint = {{ wg_hostname }}:{{ wg_public_port }}
 AllowedIPs = {{ item[1].allowedips | join(',') }}
 {% if peer_persistentkeepalive|int > 0 %}
 PersistentKeepalive = {{ peer_persistentkeepalive }}

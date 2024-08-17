@@ -1,28 +1,30 @@
 ---
-# - ansible.builtin.debug: var=ansible_all_ipv6_addresses
-#   tags: always
-# - ansible.builtin.debug: var=ansible_all_ipv4_addresses
-#   tags: always
-# - ansible.builtin.debug: var=wg_tunnel_prefixes
-#   tags: always
-# - ansible.builtin.debug: var=wg_tunnel_prefix_ipv6
-#   tags: always
-# - ansible.builtin.debug: var=wg_tunnel_prefix_ipv4
-#   tags: always
-# - ansible.builtin.debug: var=wg_ipv6_enable|bool
-#   tags: always
-# - ansible.builtin.debug: var=wg_ipv4_enable|bool
-#   tags: always
-# - ansible.builtin.debug: var=wg_uplink_prefixes
-#   tags: always
-# - ansible.builtin.debug: var=(wg_postup|length>0)
-#   tags: always
-# - ansible.builtin.debug: var=(wg_postdown|length>0)
-#   tags: always
-# - ansible.builtin.debug: var=wg_client_tunnel_flavors
-#   tags: always
-# - ansible.builtin.debug: var=wg_resolver
-#   tags: always
+- ansible.builtin.debug: var=ansible_all_ipv6_addresses
+  tags: always
+- ansible.builtin.debug: var=ansible_all_ipv4_addresses
+  tags: always
+- ansible.builtin.debug: var=wg_tunnel_prefixes
+  tags: always
+- ansible.builtin.debug: var=wg_uplink_prefixes
+  tags: always
+- ansible.builtin.debug: var=wg_tunnel_prefix_ipv6
+  tags: always
+- ansible.builtin.debug: var=wg_tunnel_prefix_ipv4
+  tags: always
+- ansible.builtin.debug: var=wg_ipv6_enable|bool
+  tags: always
+- ansible.builtin.debug: var=wg_ipv4_enable|bool
+  tags: always
+- ansible.builtin.debug: var=wg_uplink_prefixes
+  tags: always
+- ansible.builtin.debug: var=(wg_postup|length>0)
+  tags: always
+- ansible.builtin.debug: var=(wg_postdown|length>0)
+  tags: always
+- ansible.builtin.debug: var=wg_client_tunnel_flavors
+  tags: always
+- ansible.builtin.debug: var=wg_resolver
+  tags: always
 
 # - meta: end_play
 
