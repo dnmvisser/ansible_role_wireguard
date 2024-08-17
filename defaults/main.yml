@@ -6,8 +6,8 @@
 # for it on the host. You can override this to explicitly disable a protocol.
 # Because there are two protocols, and you have to have at least one,
 # there are three valid combinations: IPv4+IPv6, IPv4 only, or IPv6 only.
-wg_ipv6_enable: "{{ ansible_all_ipv6_addresses | length > 0 | bool }}"
-wg_ipv4_enable: "{{ ansible_all_ipv4_addresses | length > 0 | bool }}"
+wg_ipv6_enable: "{{ ansible_all_ipv6_addresses | default([]) | length > 0 | bool }}"
+wg_ipv4_enable: "{{ ansible_all_ipv4_addresses | default([]) | length > 0 | bool }}"
 
 # Establish uplink interface names (eth0, ens3, etc)
 wg_uplink_iface_ipv6: "{{ ansible_default_ipv6.interface if wg_ipv6_enable | bool else 'undef' }}"
@@ -62,6 +62,31 @@ wg_client_tunnel_flavors:
                     ([wg_tunnel_prefix_ipv4] | union(wg_uplink_prefixes|ansible.utils.ipv4) if wg_ipv4_enable | bool else [])) |
                     sort(reverse=True) }}"
 
+# These may need tweaking in some scenarios.
+# If you want to avoid having postup/postdown stanza, define them here
+# as an empty string ('')
+wg_postup: >-
+  {% if wg_ipv4_enable | bool -%}
+  iptables -A FORWARD -i {{ wg_uplink_iface_ipv4 }} -o %i -j ACCEPT;
+  iptables -A FORWARD -i %i -j ACCEPT;
+  iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv4 }} -j MASQUERADE;
+  {%- endif %}
+  {% if wg_ipv6_enable | bool -%}
+  ip6tables -A FORWARD -i %i -j ACCEPT;
+  ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv6 }} -j MASQUERADE
+  {%- endif %}
+
+wg_postdown: >-
+  {% if wg_ipv4_enable | bool -%}
+  iptables -D FORWARD -i {{ wg_uplink_iface_ipv4 }} -o %i -j ACCEPT;
+  iptables -D FORWARD -i %i -j ACCEPT;
+  iptables -t nat -D POSTROUTING -o {{ wg_uplink_iface_ipv4 }} -j MASQUERADE;
+  {%- endif %}
+  {% if wg_ipv6_enable | bool -%}
+  ip6tables -D FORWARD -i %i -j ACCEPT;
+  ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface_ipv6 }} -j MASQUERADE
+  {%- endif %}
+
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10
 
@@ -85,6 +110,7 @@ wg_clients: [] # store this in a vaulted file
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
 
 # Display client profiles as QR codes
+# FIXME document that this requires the yaml output in ansible
 wg_diplay_profiles: false
 
 # Whether to export all profiles to a local ZIP file
@@ -92,5 +118,6 @@ wg_diplay_profiles: false
 wg_export_profiles: false
 wg_export_profiles_dir: ~/tmp/foo
 
-# emit only required information
-stealth_mode: false
+# Emit the minimum amount of information that is required to function properly.
+# Strip out comments, account names, public keys that are not needed, etc.
+wg_stealth_mode: false

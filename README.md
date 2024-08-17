@@ -50,20 +50,6 @@ The `qrencode` command/package is required on the ansible control node.
         private_key: aEO9GjsfXDZCU/BapQuwuq4OIvIxZS52Lr0u6itSsm0=
         public_key: /IyJzlqI+WAmaYxeD9K5UIneRflFDJaDD1zFn1LUU2M=
         preshared_key: qBb0oVL2TVOxvNFiaErDctoCRsEhQwJDFfTkfHKoWb4=
-
-    wg_postup: >-
-      iptables -A FORWARD -i {{ wg_uplink_iface }} -o %i -j ACCEPT;
-      iptables -A FORWARD -i %i -j ACCEPT;
-      iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface }} -j MASQUERADE;
-      ip6tables -A FORWARD -i %i -j ACCEPT;
-      ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface }} -j MASQUERADE
-
-    wg_postdown: >-
-      iptables -D FORWARD -i {{ wg_uplink_iface }} -o %i -j ACCEPT;
-      iptables -D FORWARD -i %i -j ACCEPT;
-      iptables -t nat -D POSTROUTING -o {{ wg_uplink_iface }} -j MASQUERADE;
-      ip6tables -D FORWARD -i %i -j ACCEPT;
-      ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface }} -j MASQUERADE
 ```
 
 Deploying this will create two profiles for each client:

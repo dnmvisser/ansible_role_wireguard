@@ -1,22 +1,22 @@
-{% if not stealth_mode %}
+{% if not wg_stealth_mode | bool %}
 # {{ ansible_managed }}
 {% endif %}
 [Interface]
 Address = {{ wg_tunnel_prefixes | join(',') }}
 ListenPort = {{ wg_port }}
 PrivateKey = {{ wg_private_key }}
-{% if not stealth_mode %}
+{% if not wg_stealth_mode | bool %}
 # public key = {{ wg_public_key }}
 {% endif %}
-{% if wg_postup is defined %}
+{% if wg_postup | length > 0 %}
 PostUp = {{ wg_postup }}
 {% endif %}
-{% if wg_postdown is defined %}
+{% if wg_postdown | length > 0 %}
 PostDown = {{ wg_postdown }}
 {% endif %}
-
+{# client part #}
 {% for client in wg_clients %}
-{% if not stealth_mode %}
+{% if not wg_stealth_mode | bool %}
 # {{ client.name }}
 {% endif %}
 [Peer]

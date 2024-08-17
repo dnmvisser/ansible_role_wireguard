@@ -1,11 +1,29 @@
 ---
+# - debug: var=ansible_all_ipv6_addresses
+#   tags: always
+# - debug: var=ansible_all_ipv4_addresses
+#   tags: always
 # - debug: var=wg_tunnel_prefixes
+#   tags: always
 # - debug: var=wg_tunnel_prefix_ipv6
+#   tags: always
 # - debug: var=wg_tunnel_prefix_ipv4
+#   tags: always
 # - debug: var=wg_ipv6_enable|bool
+#   tags: always
 # - debug: var=wg_ipv4_enable|bool
+#   tags: always
 # - debug: var=wg_uplink_prefixes
+#   tags: always
+# - debug: var=(wg_postup|length>0)
+#   tags: always
+# - debug: var=(wg_postdown|length>0)
+#   tags: always
 # - debug: var=wg_client_tunnel_flavors
+#   tags: always
+# - debug: var=wg_resolver
+#   tags: always
+
 # - meta: end_play
 
 - name: Ensure IP forwarding is enabled
@@ -13,8 +31,8 @@
     name: "{{ item }}"
     value: '1'
     state: present
-  loop: "{{ wg_ipv6_enable | bool | ternary(['net.ipv6.conf.all.forwarding'], []) | union(
-           wg_ipv4_enable | bool | ternary(['net.ipv4.ip_forward'], [])) }}"
+  loop: "{{ (['net.ipv6.conf.all.forwarding'] if wg_ipv6_enable else []) | union(
+            (['net.ipv4.ip_forward'] if wg_ipv4_enable else [])) }}"
 
 - name: Ensure packages are available
   package:
@@ -25,6 +43,8 @@
   template:
     src: config.conf.j2
     dest: "{{ wg_config_file }}"
+    trim_blocks: true
+    lstrip_blocks: true
     mode: "0640"
     owner: root
     group: root
