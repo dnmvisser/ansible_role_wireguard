@@ -1,14 +1,15 @@
 galaxy_info:
+  namespace: dnmvisser
   author: Dick Visser
   description: Install and configure wireguard
   license: MIT
-  min_ansible_version: 5
+  min_ansible_version: "5"
   platforms:
-  - name: Debian
-    version:
-     - 11
-     - 12
-  - name: Ubuntu
-    version:
-     - 22
-     - 24
+    - name: Debian
+      version:
+        - 11
+        - 12
+    - name: Ubuntu
+      version:
+        - 22
+        - 24

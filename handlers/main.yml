@@ -1,6 +1,7 @@
 ---
-- name: wireguard_restart
-  systemd:
+- name: Restart wireguard
+  ansible.builtin.systemd_service:
     name: "wg-quick@{{ wg_tunnel_iface }}"
     state: restarted
     daemon_reload: true
+  listen: wireguard_restart
