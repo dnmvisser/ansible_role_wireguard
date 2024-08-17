@@ -60,24 +60,23 @@ Deploying this will create two profiles for each client:
 
 * `all` - tunnel all traffic
 * `split` - tunnel only traffic for the local IP prefix of the wireguard server.
-  In this scenario you will use the tunnel to reach resources at home. See the
-  `wg_client_tunnel_flavors` list on how to further tweak that.
+  In this scenario you will use the tunnel only to reach resources at home. See
+  the `wg_client_tunnel_flavors` list on how to further tweak that.
 
-  If you set `wg_diplay_profiles` to `true`, then all the client configuratin
-  profiles will be echoed as QR codes, for easy scanning with your android/iOS
-  device. The client profiles will NOT be stored anywhere on the server. If you
-  _do_ need to see them as text, supply the `wg_debug_client_config` flag as
-  `true`. Note: this QR code display feature work only when the stdout call is
-  set to yaml, which is not default. Either add this to your `ansible.cfg`:
+If you set `wg_diplay_profiles` to `true`, then the client configuration
+profiles will be echoed as QR codes, for easy scanning with your Android/iOS
+device. The client profiles will NOT be stored anywhere on the server. If you
+_do_ need to see them as text, supply the `wg_debug_client_config` flag as
+`true`. Note: this QR code display feature only works when the stdout call is
+set to `yaml`, which is not the default. Either add this to your `ansible.cfg`:
 
-  ```ini
-  [defaults]
-  stdout_callback = ansible.builtin.yaml
-  ```
+```ini
+[defaults]
+stdout_callback = ansible.builtin.yaml
+```
 
-  Or, supply the corresponding environment variable on the command line:
+Or supply the corresponding environment variable on the command line:
 
-  ```shell
-  ANSIBLE_STDOUT_CALLBACK=yaml ansible-playbook vpn.yml -e wg_diplay_profiles=1
-....
-  ```
+```shell
+ANSIBLE_STDOUT_CALLBACK=yaml ansible-playbook vpn.yml -e wg_diplay_profiles=1 ....
+```
