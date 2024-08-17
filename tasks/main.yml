@@ -70,7 +70,16 @@
   loop_control:
     loop_var: profile
     label: "{{ profile.name }}_{{ profile.tunnel }}"
-  when: wg_diplay_profiles
+  when: wg_display_profiles == 'qr'
+
+- name: Display client configuration profiles as text
+  ansible.builtin.debug:
+    msg: "{{ profile.config }}"
+  loop: "{{ profiles }}"
+  loop_control:
+    loop_var: profile
+    label: "{{ profile.name }}_{{ profile.tunnel }}"
+  when: wg_display_profiles == 'text'
 
 - name: Ensure export sub directory is available per user
   ansible.builtin.file:

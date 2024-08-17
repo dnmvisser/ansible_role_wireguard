@@ -121,9 +121,10 @@ wg_clients: [] # store this in a vaulted file
 #     public_key: a8HyYDnc2qnAoi5Y3rk1wNIxhxmvlnoIIe9Hs946AjE=
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
 
-# Display client profiles as QR codes
-# FIXME document that this requires the yaml output in ansible
+# Display client profiles
 wg_diplay_profiles: false
+# wg_diplay_profiles: qr
+# wg_diplay_profiles: text
 
 # Whether to export all profiles to a local ZIP file
 # Also needs to set the path to it
