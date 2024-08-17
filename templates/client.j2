@@ -10,7 +10,7 @@ DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
 PublicKey = {{ wg_public_key }}
 PresharedKey = {{ item[0].preshared_key }}
 Endpoint = {{ wg_hostname }}:{{ wg_public_port }}
-AllowedIPs = {{ item[1].allowedips | join(',') }}
+AllowedIPs = {{ item[1].allowedips | ansible.utils.cidr_merge | join(',') }}
 {% if peer_persistentkeepalive|int > 0 %}
 PersistentKeepalive = {{ peer_persistentkeepalive }}
 {% endif %}
