@@ -99,12 +99,12 @@
 - name: Export user's client profiles
   ansible.builtin.copy:
     content: "{{ profile.config }}"
-    dest: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
+    dest: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }} - {{ profile.name }} - {{ profile.tunnel }}.conf"
     mode: "0400"
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile
-    label: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }}_{{ profile.tunnel }}.conf"
+    label: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }} - {{ profile.name }} - {{ profile.tunnel }}.conf"
   delegate_to: localhost
   become: false
   when: wg_export_profiles
