@@ -59,9 +59,28 @@ display QR codes, that can be used by clients such as smart phones.
 Deploying this will create two profiles for each client:
 
 * `all` - tunnel all traffic
-* `split` - tunnel only traffic for the local IP prefix of the wireguard server.
-  In this scenario you will use the tunnel only to reach resources at home. See
-  the `wg_client_tunnel_flavors` list on how to further tweak that.
+* `split` - tunnel only part of the traffic
+
+
+By default, the `split` profile will only tunnel traffic for the local IP
+prefixes of the wireguard server. This is a practical setting to reach
+resources at home. If you want to tunnel more, then override
+`wg_split_tunnel_extra_prefixes` with a list of those:
+
+```yaml
+wg_split_tunnel_extra_prefixes:
+  - 216.73.80.0/20
+  - 216.239.32.0/19
+  - 216.252.220.0/22
+  - 2001:4860::/32
+  - 2404:6800::/32
+  - 2404:f340::/32
+  - 2600:1900::/34
+```
+
+Note that this is only for convenience and NOT a security measure. It will
+cause the profiles to contain these prefixes. As users are free to edit the
+profile, they can choose whatever prefixes they wish to tunnel.
 
 If you set `wg_diplay_profiles` to `qr`, then the client configuration
 profiles will be echoed as QR codes, for easy scanning with your Android/iOS

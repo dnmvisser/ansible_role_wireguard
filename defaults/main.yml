@@ -65,13 +65,17 @@ wg_dns_search_domains: []
 # wg_dns_search_domains:
 #   - foo.bar
 
+# Populate this with additional prefixes that will be tunneled for the split
+# tunnel flavor
+wg_split_tunnel_extra_prefixes: []
+
 wg_client_tunnel_flavors:
   - tunnel: full
     allowedips: "{{ (['::/0'] if wg_ipv6_enable | bool else []) | union(
                     (['0.0.0.0/0'] if wg_ipv4_enable | bool else [])) }}"
   - tunnel: split
-    allowedips: "{{ ([wg_tunnel_prefix_ipv6] | union(wg_uplink_prefixes|ansible.utils.ipv6) if wg_ipv6_enable | bool else []) | union(
-                    ([wg_tunnel_prefix_ipv4] | union(wg_uplink_prefixes|ansible.utils.ipv4) if wg_ipv4_enable | bool else [])) |
+    allowedips: "{{ ([wg_tunnel_prefix_ipv6] | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv6) | union(wg_uplink_prefixes|ansible.utils.ipv6) if wg_ipv6_enable | bool else []) | union(
+                    ([wg_tunnel_prefix_ipv4] | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv4) | union(wg_uplink_prefixes|ansible.utils.ipv4) if wg_ipv4_enable | bool else [])) |
                     sort(reverse=True) }}"
 
 # These may need tweaking in some scenarios.
