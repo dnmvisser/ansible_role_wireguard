@@ -99,3 +99,8 @@ Or supply the corresponding environment variable on the command line:
 ```shell
 ANSIBLE_STDOUT_CALLBACK=yaml ansible-playbook vpn.yml -e wg_diplay_profiles=qr ....
 ```
+
+Yet another option is to write the configuration files to a local directory. To
+do this, set `wg_export_profiles=1`.
+
+FIXME: add more docs
