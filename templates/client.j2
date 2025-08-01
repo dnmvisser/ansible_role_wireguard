@@ -1,3 +1,5 @@
+# WireGuard profile '{{ item[1].tunnel }}'
+# Generated at {{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}, for user '{{ item[0].name }}'
 [Interface]
 Address = {{
   ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable | bool else []) | union(

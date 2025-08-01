@@ -50,8 +50,6 @@ wg_resolver: "{{ ansible_dns.nameservers[0] }}"
 # For public hosts, you can use the default IP address (default IPv4)
 wg_hostname: "{{ ansible_default_ipv4.address if wg_ipv4_enable | bool else ansible_default_ipv6.address | ansible.utils.ipwrap}}"
 
-wg_name: "{{ wg_hostname }}"  # How the server name is displayed in client apps
-
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_tunnel_iface }}.conf"
 
@@ -130,10 +128,16 @@ wg_display_profiles: false
 # wg_display_profiles: qr
 # wg_display_profiles: text
 
-# Whether to export all profiles to a local ZIP file
+# Export all profiles to a local ZIP file
 # Also needs to set the path to it
 wg_export_profiles: false
+
+# Export all profiles to a local directory
 wg_export_profiles_dir: ~/tmp/foo
+# Adjust the path of each profile. By default we create
+# subdirectories for each one, which contains one file for
+# each tunnel
+wg_export_file_path: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_hostname }}-{{ profile.name }} - {{ profile.tunnel }}.conf"
 
 # Emit the minimum amount of information that is required to function properly.
 # Strip out comments, account names, public keys that are not needed, etc.

@@ -81,16 +81,16 @@
     label: "{{ profile.name }}_{{ profile.tunnel }}"
   when: wg_display_profiles == 'text'
 
-- name: Ensure export sub directory is available per user
+- name: Ensure any parent paths are available for exporting profiles
   ansible.builtin.file:
-    path: "{{ wg_export_profiles_dir }}/{{ profile.name }}"
+    path: "{{ wg_export_file_path | dirname }}"
     state: directory
     mode: "0700"
   run_once: true
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile
-    label: "{{ wg_export_profiles_dir }}/{{ profile.name }}"
+    label: "{{ wg_export_file_path | dirname }}"
   delegate_to: localhost
   become: false
   when: wg_export_profiles
@@ -99,12 +99,12 @@
 - name: Export user's client profiles
   ansible.builtin.copy:
     content: "{{ profile.config }}"
-    dest: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }} - {{ profile.name }} - {{ profile.tunnel }}.conf"
+    dest: "{{ wg_export_file_path }}"
     mode: "0400"
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile
-    label: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_name }} - {{ profile.name }} - {{ profile.tunnel }}.conf"
+    label: "{{ wg_export_file_path }}"
   delegate_to: localhost
   become: false
   when: wg_export_profiles
