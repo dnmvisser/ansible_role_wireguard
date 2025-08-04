@@ -4,13 +4,15 @@ Ansible role to install and configure a wireguard server on Debian flavor OSes
 
 # Requirements
 
-The bootstrap the configuration, you will need the `wg` command to generate the
+* The bootstrap the configuration, you will need the `wg` command to generate the
 various keys. This command comes with the `wireguard` package. It's easiest to
 just install that manually on the target host, and generate the keys/config on
 there - this is a one time effort.
 
-The `qrencode` command/package is required on the ansible control node to
+* The `qrencode` command/package is required on the ansible control node to
 display QR codes, that can be used by clients such as smart phones.
+
+* The [`pyinilint` command](https://pypi.org/project/pyinilint/), this can be installed with `pip intall pyinilint`.
 
 # Example playbooks
 

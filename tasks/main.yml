@@ -101,6 +101,7 @@
     content: "{{ profile.config }}"
     dest: "{{ wg_export_file_path }}"
     mode: "0400"
+    validate: pyinilint %s
   loop: "{{ profiles }}"
   loop_control:
     loop_var: profile
