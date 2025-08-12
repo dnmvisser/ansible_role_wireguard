@@ -80,15 +80,13 @@ wg_client_tunnel_flavors:
 # If you want to avoid having postup/postdown stanza, define them here
 # as an empty string ('')
 wg_postup: >-
-  {% if wg_ipv4_enable | bool -%}
-  iptables -A FORWARD -i {{ wg_uplink_iface_ipv4 }} -o %i -j ACCEPT;
-  iptables -A FORWARD -i %i -j ACCEPT;
-  iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv4 }} -j MASQUERADE;
-  {%- endif %}
-  {% if wg_ipv6_enable | bool -%}
-  ip6tables -A FORWARD -i %i -j ACCEPT;
-  ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv6 }} -j MASQUERADE
-  {%- endif %}
+  nft add table inet filter;
+  nft add chain inet filter forward { type filter hook forward priority 0 \; };
+  nft add rule inet filter forward iifname "{{ wg_uplink_iface }}" oifname "%i" accept;
+  nft add rule inet filter forward iifname "%i" accept;
+  nft add table inet nat;
+  nft add chain inet nat postrouting { type nat hook postrouting priority 100 \; };
+  nft add rule inet nat postrouting oifname "{{ wg_uplink_iface }}" masquerade
 
 wg_postdown: >-
   {% if wg_ipv4_enable | bool -%}
