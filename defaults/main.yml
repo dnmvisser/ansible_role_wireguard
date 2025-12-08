@@ -3,20 +3,20 @@
 # for it on the host. You can override this to explicitly disable a protocol.
 # Because there are two protocols, and you have to have at least one,
 # there are three valid combinations: IPv4+IPv6, IPv4 only, or IPv6 only.
-wg_ipv6_enable: "{{ ansible_default_ipv6 | default({}) | length > 0 | bool }}"
-wg_ipv4_enable: "{{ ansible_default_ipv4 | default({}) | length > 0 | bool }}"
+wg_ipv6_enable: "{{ ansible_facts['default_ipv6'] | default({}) | length > 0 | bool }}"
+wg_ipv4_enable: "{{ ansible_facts['default_ipv4'] | default({}) | length > 0 | bool }}"
 
 # Establish uplink interface names (eth0, ens3, etc)
-wg_uplink_iface_ipv6: "{{ ansible_default_ipv6.interface if wg_ipv6_enable | bool else 'undef' }}"
-wg_uplink_iface_ipv4: "{{ ansible_default_ipv4.interface if wg_ipv4_enable | bool else 'undef' }}"
+wg_uplink_iface_ipv6: "{{ ansible_facts['default_ipv6'].interface if wg_ipv6_enable | bool else 'undef' }}"
+wg_uplink_iface_ipv4: "{{ ansible_facts['default_ipv4'].interface if wg_ipv4_enable | bool else 'undef' }}"
 
 wg_uplink_prefixes: "{{
-  ([ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix] if wg_ipv6_enable | bool else []) | union(
-  ([ansible_default_ipv4.address ~ '/' ~ ansible_default_ipv4.prefix] if wg_ipv4_enable | bool else [])) | sort(reverse=True) |
+  ([ansible_facts['default_ipv6'].address ~ '/' ~ ansible_facts['default_ipv6'].prefix] if wg_ipv6_enable | bool else []) | union(
+  ([ansible_facts['default_ipv4'].address ~ '/' ~ ansible_facts['default_ipv4'].prefix] if wg_ipv4_enable | bool else [])) | sort(reverse=True) |
   ansible.utils.ipaddr('network/prefix') }}"
 
-wg_uplink_addresses: "{{ ([ansible_default_ipv6.address] if wg_ipv6_enable | bool else [])
-  | union(([ansible_default_ipv4.address] if wg_ipv4_enable | bool else []))
+wg_uplink_addresses: "{{ ([ansible_facts['default_ipv6'].address] if wg_ipv6_enable | bool else [])
+  | union(([ansible_facts['default_ipv4'].address] if wg_ipv4_enable | bool else []))
   | ansible.utils.ipaddr | sort(reverse=True) }}"
 
 wg_tunnel_iface: wg0
@@ -41,14 +41,14 @@ wg_tunnel_addresses: "{{ wg_tunnel_prefixes | map('ansible.utils.ipaddr', '1') }
 # The server's tunnel IP; when running an Adguard/Pihole/etc resolver on the same host
 # wg_resolver: "{{ wg_tunnel_prefixes | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') | first }}"
 # The server's default resolver; for hosts that are directly connected to the internet
-wg_resolver: "{{ ansible_dns.nameservers[0] }}"
+wg_resolver: "{{ ansible_facts['dns'].nameservers[0] }}"
 
 
 # What clients should be connecting to. For systems behind NAT, this is the NAT
 # gateway's public IP address or FQDN. This requires a port to be mapped/forwarded.
 # wg_hostname: vpn.foo.bar
 # For public hosts, you can use the default IP address (default IPv4)
-wg_hostname: "{{ ansible_default_ipv4.address if wg_ipv4_enable | bool else ansible_default_ipv6.address | ansible.utils.ipwrap}}"
+wg_hostname: "{{ ansible_facts['default_ipv4'].address if wg_ipv4_enable | bool else ansible_facts['default_ipv6'].address | ansible.utils.ipwrap}}"
 
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_tunnel_iface }}.conf"
