@@ -2,6 +2,7 @@
 - name: Ensure IP forwarding is enabled
   ansible.posix.sysctl:
     name: "{{ item }}"
+    sysctl_file: /etc/sysctl.d/99-forwarding.conf
     value: '1'
     state: present
   loop: "{{ (['net.ipv6.conf.all.forwarding'] if wg_ipv6_enable else []) | union(
