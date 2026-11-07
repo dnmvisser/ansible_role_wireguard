@@ -10,26 +10,14 @@ PrivateKey = {{ wg_private_key }}
 {% endif %}
 
 {# PostUp #}
-{% if wg_postup is defined and wg_postup | length > 0 %}
-{% if wg_postup is string %}
-PostUp = {{ wg_postup }}
-{% elif wg_postup is iterable %}
-{% for cmd in wg_postup %}
+{% for cmd in wg_postup | select %}
 PostUp = {{ cmd | replace(';', '\;') }}
 {% endfor %}
-{% endif %}
-{% endif %}
 
 {# PostDown #}
-{% if wg_postdown is defined and wg_postdown | length > 0 %}
-{% if wg_postdown is string %}
-PostDown = {{ wg_postdown }}
-{% elif wg_postdown is iterable %}
-{% for cmd in wg_postdown %}
+{% for cmd in wg_postdown | select %}
 PostDown = {{ cmd | replace(';', '\;') }}
 {% endfor %}
-{% endif %}
-{% endif %}
 
 {# client part #}
 {% for client in wg_clients %}
@@ -40,7 +28,7 @@ PostDown = {{ cmd | replace(';', '\;') }}
 PublicKey = {{ client.public_key }}
 PresharedKey = {{ client.preshared_key }}
 AllowedIPs = {{
-  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable else []) | union(
-  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable else [])) |
+  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable | bool else []) | union(
+  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable | bool else [])) |
   sort(reverse=True) | ansible.utils.ipaddr | join(',') }}
 {% endfor %}

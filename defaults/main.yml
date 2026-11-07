@@ -83,14 +83,55 @@ wg_client_tunnel_flavors:
 # Embedded semicolons will be escaped automatically.
 # Override as emptly lists if you don't need them.
 wg_postup:
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    sysctl -w net.ipv6.conf.{{ wg_uplink_iface_ipv6 }}.forwarding=1
+    {% endif %}
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    sysctl -w net.ipv6.conf.%i.forwarding=1
+    {% endif %}
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    sysctl -w net.ipv4.ip_forward=1
+    {% endif %}
+
+  - nft delete table inet {{ wg_table_name }} 2>/dev/null || true
   - nft add table inet {{ wg_table_name }}
   - nft add chain inet {{ wg_table_name }} forward { type filter hook forward priority -1; policy accept; }
   - nft add chain inet {{ wg_table_name }} postrouting { type nat hook postrouting priority srcnat; policy accept; }
-  - nft add rule inet {{ wg_table_name }} forward iifname "%i" accept
-  - "{% if wg_ipv6_enable %}nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv6 | quote }} ip6 saddr != {{ wg_tunnel_prefix_ipv6 }} masquerade{% endif %}"
-  - "{% if wg_ipv4_enable %}nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv4 | quote }} ip saddr != {{ wg_tunnel_prefix_ipv4 }} masquerade{% endif %}"
+
+  - >-
+    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname "%i" accept
+  - >-
+    {% if not wg_dualstack -%}
+    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv4 {% elif wg_ipv4only %}meta nfproto ipv6 {% endif %}iifname "%i" reject
+    {% endif %}
+
+  - >-
+    {% if not wg_dualstack or wg_uplink_iface_ipv6 == wg_uplink_iface_ipv4 -%}
+    nft add rule inet wireguard postrouting oifname br0 masquerade
+    {% endif %}
+  - >-
+    {% if wg_dualstack and (wg_uplink_iface_ipv6 != wg_uplink_iface_ipv4) -%}
+    nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv6 | quote }} ip6 saddr != {{ wg_tunnel_prefix_ipv6 }} masquerade
+    {% endif %}
+  - >-
+    {% if wg_dualstack and (wg_uplink_iface_ipv6 != wg_uplink_iface_ipv4) -%}
+    nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv4 | quote }} ip saddr != {{ wg_tunnel_prefix_ipv4 }} masquerade
+    {% endif %}
 
 wg_postdown:
+  # NOTE We do not disable IPv4 forwarding because that is global and commonly used elsewhere.
+  # We only disable IPv6 forwarding for our interfaces.
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    sysctl -w net.ipv6.conf.{{ wg_uplink_iface_ipv6 }}.forwarding=0
+    {% endif %}
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    sysctl -w net.ipv4.ip_forward=0
+    {% endif %}
   - nft delete table inet {{ wg_table_name }}
 
 # Set to 0 or false to disable this in the [Peer] section
