@@ -5,7 +5,16 @@ wg_packages:
 
 wg_kernel_debug_control_file: /sys/kernel/debug/dynamic_debug/control
 
+
 # Helpers
 wg_dualstack: "{{ wg_ipv6_enable | bool and wg_ipv4_enable | bool }}"
 wg_ipv6only: "{{ wg_ipv6_enable | bool and not wg_ipv4_enable | bool }}"
 wg_ipv4only: "{{ wg_ipv4_enable | bool and not wg_ipv6_enable | bool }}"
+wg_mode: >-
+  {% if wg_dualstack -%}
+  dualstack
+  {% elif wg_ipv6only -%}
+  ipv6only
+  {% else -%}
+  ipv4only
+  {% endif %}

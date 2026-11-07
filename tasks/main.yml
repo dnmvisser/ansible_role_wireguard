@@ -46,13 +46,20 @@
 - name: Build list of client configuration profiles
   # To be used later to display as QR, or to create a ZIP file
   ansible.builtin.set_fact:
-    profiles: "{{ profiles| default([]) | union([
-      {
-        'config': lookup('ansible.builtin.template', 'client.j2'),
-        'name': item[0].name,
-        'tunnel': item[1].tunnel
-      }
-      ]) }}"
+    profiles: >-
+      {{
+        profiles
+        | default([])
+        | union(
+          [
+            {
+              'config': lookup('ansible.builtin.template', 'client.j2'),
+              'name': item[0].name,
+              'tunnel': item[1].tunnel
+            }
+          ]
+        )
+      }}
   loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
   loop_control:
     extended: true

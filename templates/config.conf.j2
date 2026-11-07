@@ -1,5 +1,6 @@
 {% if not wg_stealth_mode | bool %}
 # {{ ansible_managed }}
+# Wireguard mode: {{ wg_mode }}
 {% endif %}
 [Interface]
 Address = {{ wg_tunnel_addresses | join(',') }}
@@ -21,10 +22,10 @@ PostDown = {{ cmd | replace(';', '\;') }}
 
 {# client part #}
 {% for client in wg_clients %}
+[Peer]
 {% if not wg_stealth_mode | bool %}
 # {{ client.name }}
 {% endif %}
-[Peer]
 PublicKey = {{ client.public_key }}
 PresharedKey = {{ client.preshared_key }}
 AllowedIPs = {{

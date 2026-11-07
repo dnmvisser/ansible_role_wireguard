@@ -3,12 +3,12 @@
 # for it on the host. You can override this to explicitly disable a protocol.
 # Because there are two protocols, and you have to have at least one,
 # there are three valid combinations: IPv4+IPv6, IPv4 only, or IPv6 only.
-wg_ipv6_enable: "{{ ansible_facts['default_ipv6'] | default({}) | length > 0 | bool }}"
-wg_ipv4_enable: "{{ ansible_facts['default_ipv4'] | default({}) | length > 0 | bool }}"
+wg_ipv6_enable: "{{ (ansible_facts.get('default_ipv6', {}) | length > 0) | bool }}"
+wg_ipv4_enable: "{{ (ansible_facts.get('default_ipv4', {}) | length > 0) | bool }}"
 
-# Establish uplink interface names (eth0, ens3, etc)
-wg_uplink_iface_ipv6: "{{ ansible_facts['default_ipv6'].interface if wg_ipv6_enable | bool else 'undef' }}"
-wg_uplink_iface_ipv4: "{{ ansible_facts['default_ipv4'].interface if wg_ipv4_enable | bool else 'undef' }}"
+# Establish uplink interface (eth0, ens3, br0, etc)
+wg_uplink_iface: "{{ (wg_ipv4_enable | bool) | ternary(ansible_facts['default_ipv4'].interface, (wg_ipv6_enable | bool) | ternary(ansible_facts['default_ipv6'].interface, none)) }}"
+wg_uplink_iface_type: "{{ ansible_facts[wg_uplink_iface].get('type') }}"
 
 wg_uplink_prefixes: "{{
   ([ansible_facts['default_ipv6'].address ~ '/' ~ ansible_facts['default_ipv6'].prefix] if wg_ipv6_enable | bool else []) | union(
@@ -36,8 +36,11 @@ wg_public_port: "{{ wg_server_port }}"
 wg_tunnel_prefix_ipv6: fd99:9999::/64
 wg_tunnel_prefix_ipv4: 10.99.99.0/24
 
-wg_tunnel_prefixes: "{{ ([wg_tunnel_prefix_ipv6] if wg_ipv6_enable | bool else []) | union(
-                        ([wg_tunnel_prefix_ipv4] if wg_ipv4_enable | bool else [])) | sort(reverse=True) }}"
+wg_tunnel_prefixes: >-
+  {{
+    ([wg_tunnel_prefix_ipv6] if wg_ipv6_enable | bool else [])
+    | union(([wg_tunnel_prefix_ipv4] if wg_ipv4_enable | bool else [])) | sort(reverse=True)
+  }}
 wg_tunnel_addresses: "{{ wg_tunnel_prefixes | map('ansible.utils.ipaddr', '1') }}"
 # Resolver address. This is only relevant for the client profiles.
 # What to pick here depends on the scenario:
@@ -51,7 +54,7 @@ wg_resolver: "{{ ansible_facts['dns'].nameservers[0] }}"
 # gateway's public IP address or FQDN. This requires a port to be mapped/forwarded.
 # wg_hostname: vpn.foo.bar
 # For public hosts, you can use the default IP address (default IPv4)
-wg_hostname: "{{ ansible_facts['default_ipv4'].address if wg_ipv4_enable | bool else ansible_facts['default_ipv6'].address | ansible.utils.ipwrap}}"
+wg_hostname: "{{ ansible_facts['default_ipv4'].address if wg_ipv4_enable | bool else ansible_facts['default_ipv6'].address | ansible.utils.ipwrap }}"
 
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_tunnel_iface }}.conf"
@@ -72,12 +75,28 @@ wg_split_tunnel_extra_prefixes: []
 
 wg_client_tunnel_flavors:
   - tunnel: full
-    allowedips: "{{ (['::/0'] if wg_ipv6_enable | bool else []) | union(
-                    (['0.0.0.0/0'] if wg_ipv4_enable | bool else [])) }}"
+    allowedips: >-
+      {{
+        (['::/0'] if wg_ipv6_enable | bool else [])
+        | union((['0.0.0.0/0'] if wg_ipv4_enable | bool else []))
+      }}
   - tunnel: split
-    allowedips: "{{ ([wg_tunnel_prefix_ipv6] | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv6) | union(wg_uplink_prefixes|ansible.utils.ipv6) if wg_ipv6_enable | bool else []) | union(
-                    ([wg_tunnel_prefix_ipv4] | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv4) | union(wg_uplink_prefixes|ansible.utils.ipv4) if wg_ipv4_enable | bool else [])) |
-                    sort(reverse=True) }}"
+    allowedips: >-
+      {{
+        (
+          [wg_tunnel_prefix_ipv6]
+          | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv6)
+          | union(wg_uplink_prefixes | ansible.utils.ipv6) if wg_ipv6_enable | bool else []
+        )
+        | union(
+          (
+            [wg_tunnel_prefix_ipv4]
+            | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv4)
+            | union(wg_uplink_prefixes | ansible.utils.ipv4) if wg_ipv4_enable | bool else []
+          )
+        )
+        | sort(reverse=True)
+      }}
 
 # These may need tweaking in some scenarios.
 # Embedded semicolons will be escaped automatically.
@@ -85,7 +104,7 @@ wg_client_tunnel_flavors:
 wg_postup:
   - >-
     {% if wg_ipv6_enable | bool -%}
-    sysctl -w net.ipv6.conf.{{ wg_uplink_iface_ipv6 }}.forwarding=1
+    sysctl -w net.ipv6.conf.{{ wg_uplink_iface }}.forwarding=1
     {% endif %}
   - >-
     {% if wg_ipv6_enable | bool -%}
@@ -95,30 +114,56 @@ wg_postup:
     {% if wg_ipv4_enable | bool -%}
     sysctl -w net.ipv4.ip_forward=1
     {% endif %}
-
-  - nft delete table inet {{ wg_table_name }} 2>/dev/null || true
-  - nft add table inet {{ wg_table_name }}
-  - nft add chain inet {{ wg_table_name }} forward { type filter hook forward priority -1; policy accept; }
-  - nft add chain inet {{ wg_table_name }} postrouting { type nat hook postrouting priority srcnat; policy accept; }
-
   - >-
-    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname "%i" accept
+    {% if wg_uplink_iface_type == 'bridge' -%}
+    sysctl -w net.bridge.bridge-nf-call-iptables=1
+    {% endif %}
+  - nft delete table inet {{ wg_table_name }} 2>/dev/null || true
+  - >-
+    {% if wg_uplink_iface_type == 'bridge' -%}
+    nft delete table bridge wireguard-br 2>/dev/null || true
+    {% endif %}
+  - nft add table inet {{ wg_table_name }}
+  - nft add chain inet {{ wg_table_name }} forward { type filter hook forward priority filter; policy accept; }
+  - nft add chain inet {{ wg_table_name }} postrouting { type nat hook postrouting priority srcnat; policy accept; }
+  - nft add rule inet wireguard forward ct state established,related accept
+  # Accept in and out
+  - >-
+    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname "%i" oifname {{ wg_uplink_iface | quote }} accept
+  - >-
+    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname {{ wg_uplink_iface | quote }} oifname "%i" accept
+  - nft add rule inet wireguard forward iifname "%i" oifname "%i" accept
+
+  # FIXME test this better
+  # In a non-dualstack setup, actively reject the other protocol.
   - >-
     {% if not wg_dualstack -%}
     nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv4 {% elif wg_ipv4only %}meta nfproto ipv6 {% endif %}iifname "%i" reject
     {% endif %}
+  - >-
+    {% if not wg_dualstack -%}
+    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv4 {% elif wg_ipv4only %}meta nfproto ipv6 {% endif %}oifname "%i" reject
+    {% endif %}
 
   - >-
-    {% if not wg_dualstack or wg_uplink_iface_ipv6 == wg_uplink_iface_ipv4 -%}
-    nft add rule inet wireguard postrouting oifname br0 masquerade
+    nft add rule inet wireguard postrouting oifname {{ wg_uplink_iface }} masquerade
+
+
+  - >-
+    {% if wg_uplink_iface_type == 'bridge' -%}
+    nft add table bridge {{ wg_table_name }}-br
     {% endif %}
   - >-
-    {% if wg_dualstack and (wg_uplink_iface_ipv6 != wg_uplink_iface_ipv4) -%}
-    nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv6 | quote }} ip6 saddr != {{ wg_tunnel_prefix_ipv6 }} masquerade
+    {% if wg_uplink_iface_type == 'bridge' -%}
+    nft add chain bridge {{ wg_table_name }}-br forward { type filter hook forward priority filter; policy accept; }
     {% endif %}
   - >-
-    {% if wg_dualstack and (wg_uplink_iface_ipv6 != wg_uplink_iface_ipv4) -%}
-    nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv4 | quote }} ip saddr != {{ wg_tunnel_prefix_ipv4 }} masquerade
+    {% if wg_uplink_iface_type == 'bridge' -%}
+    nft add rule bridge {{ wg_table_name }}-br forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname "%i" accept
+    {% endif %}
+  - >-
+    {% if wg_uplink_iface_type == 'bridge' -%}
+    nft add rule bridge {{ wg_table_name }}-br forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}oifname "%i" accept
     {% endif %}
 
 wg_postdown:
@@ -126,13 +171,17 @@ wg_postdown:
   # We only disable IPv6 forwarding for our interfaces.
   - >-
     {% if wg_ipv6_enable | bool -%}
-    sysctl -w net.ipv6.conf.{{ wg_uplink_iface_ipv6 }}.forwarding=0
+    sysctl -w net.ipv6.conf.{{ wg_uplink_iface }}.forwarding=0
     {% endif %}
   - >-
     {% if wg_ipv4_enable | bool -%}
     sysctl -w net.ipv4.ip_forward=0
     {% endif %}
   - nft delete table inet {{ wg_table_name }}
+  - >-
+    {% if wg_uplink_iface_type == 'bridge' -%}
+    nft delete table bridge {{ wg_table_name }}-br
+    {% endif %}
 
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10
