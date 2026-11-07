@@ -22,7 +22,7 @@ wg_uplink_addresses: "{{ ([ansible_facts['default_ipv6'].address] if wg_ipv6_ena
 wg_tunnel_iface: wg0
 
 # nftables table name
-wg_table_name: {{ wg_table_name }}
+wg_table_name: wireguard
 
 # Which port to use on the server
 wg_server_port: 51820
@@ -80,21 +80,17 @@ wg_client_tunnel_flavors:
                     sort(reverse=True) }}"
 
 # These may need tweaking in some scenarios.
-# Override these as emptly lists if you don't need them.
+# Embedded semicolons will be escaped automatically.
+# Override as emptly lists if you don't need them.
 wg_postup:
   - nft add table inet {{ wg_table_name }}
-  - nft add chain inet {{ wg_table_name }} forward { type filter hook forward priority -1 ; policy accept ; }
-  - nft add chain inet {{ wg_table_name }} postrouting { type nat hook postrouting priority srcnat ; policy accept ; }
+  - nft add chain inet {{ wg_table_name }} forward { type filter hook forward priority -1; policy accept; }
+  - nft add chain inet {{ wg_table_name }} postrouting { type nat hook postrouting priority srcnat; policy accept; }
   - nft add rule inet {{ wg_table_name }} forward iifname "%i" accept
   - "{% if wg_ipv6_enable %}nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv6 | quote }} ip6 saddr != {{ wg_tunnel_prefix_ipv6 }} masquerade{% endif %}"
   - "{% if wg_ipv4_enable %}nft add rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv4 | quote }} ip saddr != {{ wg_tunnel_prefix_ipv4 }} masquerade{% endif %}"
 
-wg_postdown: >-
-  - "{% if wg_ipv4_enable %}nft delete rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv4 | quote }} ip saddr != {{ wg_tunnel_prefix_ipv4 }} masquerade{% endif %}"
-  - "{% if wg_ipv6_enable %}nft delete rule inet {{ wg_table_name }} postrouting oifname {{ wg_uplink_iface_ipv6 | quote }} ip6 saddr != {{ wg_tunnel_prefix_ipv6 }} masquerade{% endif %}"
-  - nft delete rule inet {{ wg_table_name }} forward iifname "%i" accept
-  - nft flush chain inet {{ wg_table_name }} postrouting
-  - nft flush chain inet {{ wg_table_name }} forward
+wg_postdown:
   - nft delete table inet {{ wg_table_name }}
 
 # Set to 0 or false to disable this in the [Peer] section
