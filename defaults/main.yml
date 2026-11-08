@@ -107,37 +107,28 @@ wg_postup:
     {% if wg_ipv4_enable | bool -%}
     sysctl -w net.ipv4.ip_forward=1
     {% endif %}
-  # - >-
-  #   {% if wg_uplink_iface_type == 'bridge' -%}
-  #   sysctl -w net.bridge.bridge-nf-call-iptables=1
-  #   {% endif %}
 
   - >-
     {% if wg_ipv6_enable | bool -%}
     ip6tables -A FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv6_enable | bool -%}
     ip6tables -A FORWARD -i "%i" -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv6_enable | bool -%}
     ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
     {% endif %}
 
-
   - >-
     {% if wg_ipv4_enable | bool -%}
     iptables -A FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv4_enable | bool -%}
     iptables -A FORWARD -i "%i" -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv4_enable | bool -%}
     iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
@@ -150,33 +141,27 @@ wg_postdown:
     {% if wg_ipv6_enable | bool -%}
     ip6tables -D FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv6_enable | bool -%}
     ip6tables -D FORWARD -i "%i" -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv6_enable | bool -%}
     ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
     {% endif %}
 
-
   - >-
     {% if wg_ipv4_enable | bool -%}
     iptables -D FORWARD -i {{ wg_uplink_iface | quote }} -o %i -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv4_enable | bool -%}
     iptables -D FORWARD -i "%i" -j ACCEPT
     {% endif %}
-
   - >-
     {% if wg_ipv4_enable | bool -%}
     iptables -t nat -D POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
     {% endif %}
-
 
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10
