@@ -104,84 +104,82 @@ wg_client_tunnel_flavors:
 wg_postup:
   - >-
     {% if wg_ipv6_enable | bool -%}
-    sysctl -w net.ipv6.conf.{{ wg_uplink_iface }}.forwarding=1
-    {% endif %}
-  - >-
-    {% if wg_ipv6_enable | bool -%}
-    sysctl -w net.ipv6.conf.%i.forwarding=1
+    sysctl -w net.ipv6.conf.all.forwarding=1
     {% endif %}
   - >-
     {% if wg_ipv4_enable | bool -%}
     sysctl -w net.ipv4.ip_forward=1
     {% endif %}
-  - >-
-    {% if wg_uplink_iface_type == 'bridge' -%}
-    sysctl -w net.bridge.bridge-nf-call-iptables=1
-    {% endif %}
-  - nft delete table inet {{ wg_table_name }} 2>/dev/null || true
-  - >-
-    {% if wg_uplink_iface_type == 'bridge' -%}
-    nft delete table bridge wireguard-br 2>/dev/null || true
-    {% endif %}
-  - nft add table inet {{ wg_table_name }}
-  - nft add chain inet {{ wg_table_name }} forward { type filter hook forward priority filter; policy accept; }
-  - nft add chain inet {{ wg_table_name }} postrouting { type nat hook postrouting priority srcnat; policy accept; }
-  - nft add rule inet wireguard forward ct state established,related accept
-  # Accept in and out
-  - >-
-    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname "%i" oifname {{ wg_uplink_iface | quote }} accept
-  - >-
-    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname {{ wg_uplink_iface | quote }} oifname "%i" accept
-  - nft add rule inet wireguard forward iifname "%i" oifname "%i" accept
+  # - >-
+  #   {% if wg_uplink_iface_type == 'bridge' -%}
+  #   sysctl -w net.bridge.bridge-nf-call-iptables=1
+  #   {% endif %}
 
-  # FIXME test this better
-  # In a non-dualstack setup, actively reject the other protocol.
-  - >-
-    {% if not wg_dualstack -%}
-    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv4 {% elif wg_ipv4only %}meta nfproto ipv6 {% endif %}iifname "%i" reject
-    {% endif %}
-  - >-
-    {% if not wg_dualstack -%}
-    nft add rule inet {{ wg_table_name }} forward {% if wg_ipv6only %}meta nfproto ipv4 {% elif wg_ipv4only %}meta nfproto ipv6 {% endif %}oifname "%i" reject
-    {% endif %}
-
-  - >-
-    nft add rule inet wireguard postrouting oifname {{ wg_uplink_iface }} masquerade
-
-
-  - >-
-    {% if wg_uplink_iface_type == 'bridge' -%}
-    nft add table bridge {{ wg_table_name }}-br
-    {% endif %}
-  - >-
-    {% if wg_uplink_iface_type == 'bridge' -%}
-    nft add chain bridge {{ wg_table_name }}-br forward { type filter hook forward priority filter; policy accept; }
-    {% endif %}
-  - >-
-    {% if wg_uplink_iface_type == 'bridge' -%}
-    nft add rule bridge {{ wg_table_name }}-br forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}iifname "%i" accept
-    {% endif %}
-  - >-
-    {% if wg_uplink_iface_type == 'bridge' -%}
-    nft add rule bridge {{ wg_table_name }}-br forward {% if wg_ipv6only %}meta nfproto ipv6 {% elif wg_ipv4only %}meta nfproto ipv4 {% endif %}oifname "%i" accept
-    {% endif %}
-
-wg_postdown:
-  # NOTE We do not disable IPv4 forwarding because that is global and commonly used elsewhere.
-  # We only disable IPv6 forwarding for our interfaces.
   - >-
     {% if wg_ipv6_enable | bool -%}
-    sysctl -w net.ipv6.conf.{{ wg_uplink_iface }}.forwarding=0
+    ip6tables -A FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
     {% endif %}
+
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -A FORWARD -i "%i" -j ACCEPT
+    {% endif %}
+
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
+
+
   - >-
     {% if wg_ipv4_enable | bool -%}
-    sysctl -w net.ipv4.ip_forward=0
+    iptables -A FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
     {% endif %}
-  - nft delete table inet {{ wg_table_name }}
+
   - >-
-    {% if wg_uplink_iface_type == 'bridge' -%}
-    nft delete table bridge {{ wg_table_name }}-br
+    {% if wg_ipv4_enable | bool -%}
+    iptables -A FORWARD -i "%i" -j ACCEPT
     {% endif %}
+
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
+
+
+wg_postdown:
+  # NOTE We do not disable forwarding because that is global and commonly used elsewhere.
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -D FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
+    {% endif %}
+
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -D FORWARD -i "%i" -j ACCEPT
+    {% endif %}
+
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
+
+
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -D FORWARD -i {{ wg_uplink_iface | quote }} -o %i -j ACCEPT
+    {% endif %}
+
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -D FORWARD -i "%i" -j ACCEPT
+    {% endif %}
+
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -t nat -D POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
+
 
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10
