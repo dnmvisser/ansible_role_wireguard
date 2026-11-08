@@ -21,9 +21,6 @@ wg_uplink_addresses: "{{ ([ansible_facts['default_ipv6'].address] if wg_ipv6_ena
 
 wg_tunnel_iface: wg0
 
-# nftables table name
-wg_table_name: wireguard
-
 # Which port to use on the server
 wg_server_port: 51820
 # Which port to use in client profile. This can be useful in NAT scenarios where
