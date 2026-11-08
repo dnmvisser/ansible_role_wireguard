@@ -3,12 +3,12 @@
 # for it on the host. You can override this to explicitly disable a protocol.
 # Because there are two protocols, and you have to have at least one,
 # there are three valid combinations: IPv4+IPv6, IPv4 only, or IPv6 only.
-wg_ipv6_enable: "{{ ansible_facts['default_ipv6'] | default({}) | length > 0 | bool }}"
-wg_ipv4_enable: "{{ ansible_facts['default_ipv4'] | default({}) | length > 0 | bool }}"
+wg_ipv6_enable: "{{ (ansible_facts.get('default_ipv6', {}) | length > 0) | bool }}"
+wg_ipv4_enable: "{{ (ansible_facts.get('default_ipv4', {}) | length > 0) | bool }}"
 
-# Establish uplink interface names (eth0, ens3, etc)
-wg_uplink_iface_ipv6: "{{ ansible_facts['default_ipv6'].interface if wg_ipv6_enable | bool else 'undef' }}"
-wg_uplink_iface_ipv4: "{{ ansible_facts['default_ipv4'].interface if wg_ipv4_enable | bool else 'undef' }}"
+# Establish uplink interface (eth0, ens3, br0, etc)
+wg_uplink_iface: "{{ (wg_ipv4_enable | bool) | ternary(ansible_facts['default_ipv4'].interface, (wg_ipv6_enable | bool) | ternary(ansible_facts['default_ipv6'].interface, none)) }}"
+wg_uplink_iface_type: "{{ ansible_facts[wg_uplink_iface].get('type') }}"
 
 wg_uplink_prefixes: "{{
   ([ansible_facts['default_ipv6'].address ~ '/' ~ ansible_facts['default_ipv6'].prefix] if wg_ipv6_enable | bool else []) | union(
@@ -33,8 +33,11 @@ wg_public_port: "{{ wg_server_port }}"
 wg_tunnel_prefix_ipv6: fd99:9999::/64
 wg_tunnel_prefix_ipv4: 10.99.99.0/24
 
-wg_tunnel_prefixes: "{{ ([wg_tunnel_prefix_ipv6] if wg_ipv6_enable | bool else []) | union(
-                        ([wg_tunnel_prefix_ipv4] if wg_ipv4_enable | bool else [])) | sort(reverse=True) }}"
+wg_tunnel_prefixes: >-
+  {{
+    ([wg_tunnel_prefix_ipv6] if wg_ipv6_enable | bool else [])
+    | union(([wg_tunnel_prefix_ipv4] if wg_ipv4_enable | bool else [])) | sort(reverse=True)
+  }}
 wg_tunnel_addresses: "{{ wg_tunnel_prefixes | map('ansible.utils.ipaddr', '1') }}"
 # Resolver address. This is only relevant for the client profiles.
 # What to pick here depends on the scenario:
@@ -48,7 +51,7 @@ wg_resolver: "{{ ansible_facts['dns'].nameservers[0] }}"
 # gateway's public IP address or FQDN. This requires a port to be mapped/forwarded.
 # wg_hostname: vpn.foo.bar
 # For public hosts, you can use the default IP address (default IPv4)
-wg_hostname: "{{ ansible_facts['default_ipv4'].address if wg_ipv4_enable | bool else ansible_facts['default_ipv6'].address | ansible.utils.ipwrap}}"
+wg_hostname: "{{ ansible_facts['default_ipv4'].address if wg_ipv4_enable | bool else ansible_facts['default_ipv6'].address | ansible.utils.ipwrap }}"
 
 wg_config_dir: /etc/wireguard
 wg_config_file: "{{ wg_config_dir }}/{{ wg_tunnel_iface }}.conf"
@@ -69,37 +72,95 @@ wg_split_tunnel_extra_prefixes: []
 
 wg_client_tunnel_flavors:
   - tunnel: full
-    allowedips: "{{ (['::/0'] if wg_ipv6_enable | bool else []) | union(
-                    (['0.0.0.0/0'] if wg_ipv4_enable | bool else [])) }}"
+    allowedips: >-
+      {{
+        (['::/0'] if wg_ipv6_enable | bool else [])
+        | union((['0.0.0.0/0'] if wg_ipv4_enable | bool else []))
+      }}
   - tunnel: split
-    allowedips: "{{ ([wg_tunnel_prefix_ipv6] | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv6) | union(wg_uplink_prefixes|ansible.utils.ipv6) if wg_ipv6_enable | bool else []) | union(
-                    ([wg_tunnel_prefix_ipv4] | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv4) | union(wg_uplink_prefixes|ansible.utils.ipv4) if wg_ipv4_enable | bool else [])) |
-                    sort(reverse=True) }}"
+    allowedips: >-
+      {{
+        (
+          [wg_tunnel_prefix_ipv6]
+          | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv6)
+          | union(wg_uplink_prefixes | ansible.utils.ipv6) if wg_ipv6_enable | bool else []
+        )
+        | union(
+          (
+            [wg_tunnel_prefix_ipv4]
+            | union(wg_split_tunnel_extra_prefixes | ansible.utils.ipv4)
+            | union(wg_uplink_prefixes | ansible.utils.ipv4) if wg_ipv4_enable | bool else []
+          )
+        )
+        | sort(reverse=True)
+      }}
 
 # These may need tweaking in some scenarios.
-# If you want to avoid having postup/postdown stanza, define them here
-# as an empty string ('')
-wg_postup: >-
-  {% if wg_ipv4_enable | bool -%}
-  iptables -A FORWARD -i {{ wg_uplink_iface_ipv4 }} -o %i -j ACCEPT;
-  iptables -A FORWARD -i %i -j ACCEPT;
-  iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv4 }} -j MASQUERADE;
-  {%- endif %}
-  {% if wg_ipv6_enable | bool -%}
-  ip6tables -A FORWARD -i %i -j ACCEPT;
-  ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface_ipv6 }} -j MASQUERADE
-  {%- endif %}
+# Embedded semicolons will be escaped automatically.
+# Override as emptly lists if you don't need them.
+wg_postup:
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    sysctl -w net.ipv6.conf.all.forwarding=1
+    {% endif %}
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    sysctl -w net.ipv4.ip_forward=1
+    {% endif %}
 
-wg_postdown: >-
-  {% if wg_ipv4_enable | bool -%}
-  iptables -D FORWARD -i {{ wg_uplink_iface_ipv4 }} -o %i -j ACCEPT;
-  iptables -D FORWARD -i %i -j ACCEPT;
-  iptables -t nat -D POSTROUTING -o {{ wg_uplink_iface_ipv4 }} -j MASQUERADE;
-  {%- endif %}
-  {% if wg_ipv6_enable | bool -%}
-  ip6tables -D FORWARD -i %i -j ACCEPT;
-  ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface_ipv6 }} -j MASQUERADE
-  {%- endif %}
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -A FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -A FORWARD -i "%i" -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -t nat -A POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
+
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -A FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -A FORWARD -i "%i" -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
+
+wg_postdown:
+  # NOTE We do not disable forwarding because that is global and commonly used elsewhere.
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -D FORWARD -i {{ wg_uplink_iface | quote }} -o "%i" -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -D FORWARD -i "%i" -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv6_enable | bool -%}
+    ip6tables -t nat -D POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
+
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -D FORWARD -i {{ wg_uplink_iface | quote }} -o %i -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -D FORWARD -i "%i" -j ACCEPT
+    {% endif %}
+  - >-
+    {% if wg_ipv4_enable | bool -%}
+    iptables -t nat -D POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
+    {% endif %}
 
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10

@@ -1,5 +1,6 @@
 {% if not wg_stealth_mode | bool %}
 # {{ ansible_managed }}
+# Wireguard mode: {{ wg_mode }}
 {% endif %}
 [Interface]
 Address = {{ wg_tunnel_addresses | join(',') }}
@@ -8,22 +9,27 @@ PrivateKey = {{ wg_private_key }}
 {% if not wg_stealth_mode | bool %}
 # public key = {{ wg_public_key }}
 {% endif %}
-{% if wg_postup | length > 0 %}
-PostUp = {{ wg_postup }}
-{% endif %}
-{% if wg_postdown | length > 0 %}
-PostDown = {{ wg_postdown }}
-{% endif %}
+
+{# PostUp #}
+{% for cmd in wg_postup | select %}
+PostUp = {{ cmd | replace(';', '\;') }}
+{% endfor %}
+
+{# PostDown #}
+{% for cmd in wg_postdown | select %}
+PostDown = {{ cmd | replace(';', '\;') }}
+{% endfor %}
+
 {# client part #}
 {% for client in wg_clients %}
+[Peer]
 {% if not wg_stealth_mode | bool %}
 # {{ client.name }}
 {% endif %}
-[Peer]
 PublicKey = {{ client.public_key }}
 PresharedKey = {{ client.preshared_key }}
 AllowedIPs = {{
-  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable else []) | union(
-  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable else [])) |
+  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable | bool else []) | union(
+  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable | bool else [])) |
   sort(reverse=True) | ansible.utils.ipaddr | join(',') }}
 {% endfor %}

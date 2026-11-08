@@ -1,12 +1,10 @@
 ---
-- name: Ensure IP forwarding is enabled
-  ansible.posix.sysctl:
-    name: "{{ item }}"
-    sysctl_file: /etc/sysctl.d/99-forwarding.conf
-    value: '1'
-    state: present
-  loop: "{{ (['net.ipv6.conf.all.forwarding'] if wg_ipv6_enable else []) | union(
-            (['net.ipv4.ip_forward'] if wg_ipv4_enable else [])) }}"
+- name: Ensure we have at least one protocol enabled
+  ansible.builtin.assert:
+    that:
+      - wg_ipv6_enable | bool or wg_ipv4_enable | bool
+    fail_msg: >
+      Neither IPv4 nor IPv6 seems enabled, exiting.
 
 - name: Ensure packages are available
   ansible.builtin.package:
@@ -48,13 +46,20 @@
 - name: Build list of client configuration profiles
   # To be used later to display as QR, or to create a ZIP file
   ansible.builtin.set_fact:
-    profiles: "{{ profiles| default([]) | union([
-      {
-        'config': lookup('ansible.builtin.template', 'client.j2'),
-        'name': item[0].name,
-        'tunnel': item[1].tunnel
-      }
-      ]) }}"
+    profiles: >-
+      {{
+        profiles
+        | default([])
+        | union(
+          [
+            {
+              'config': lookup('ansible.builtin.template', 'client.j2'),
+              'name': item[0].name,
+              'tunnel': item[1].tunnel
+            }
+          ]
+        )
+      }}
   loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
   loop_control:
     extended: true
