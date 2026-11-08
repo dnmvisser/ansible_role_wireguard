@@ -134,7 +134,6 @@ wg_postup:
     iptables -t nat -A POSTROUTING -o {{ wg_uplink_iface | quote }} -j MASQUERADE
     {% endif %}
 
-
 wg_postdown:
   # NOTE We do not disable forwarding because that is global and commonly used elsewhere.
   - >-
