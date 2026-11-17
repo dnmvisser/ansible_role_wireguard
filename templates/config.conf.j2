@@ -21,15 +21,12 @@ PostDown = {{ cmd | replace(';', '\;') }}
 {% endfor %}
 
 {# client part #}
-{% for client in wg_clients %}
+{% for profile in profiles %}
 [Peer]
 {% if not wg_stealth_mode | bool %}
-# {{ client.name }}
+# {{ profile.client.name }}
 {% endif %}
-PublicKey = {{ client.public_key }}
-PresharedKey = {{ client.preshared_key }}
-AllowedIPs = {{
-  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable | bool else []) | union(
-  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(loop.index+1) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable | bool else [])) |
-  sort(reverse=True) | ansible.utils.ipaddr | join(',') }}
+PublicKey = {{ profile.client.public_key }}
+PresharedKey = {{ profile.client.preshared_key }}
+AllowedIPs = {{ profile.client_addresses | join(',') }}
 {% endfor %}

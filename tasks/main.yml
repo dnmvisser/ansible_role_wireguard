@@ -11,6 +11,47 @@
     name: "{{ wg_packages }}"
     state: present
 
+- name: Build list of client configuration profiles
+  # To be used later to display as QR, or to create a ZIP file
+  ansible.builtin.set_fact:
+    profiles: >-
+      {{
+        profiles
+        | default([])
+        | union(
+          [
+            {
+              'config': lookup('ansible.builtin.template', 'client.j2'),
+              'name': item[0].name,
+              'tunnel': item[1].tunnel,
+              'client': item[0],
+              'old2': item[1],
+            }
+          ]
+        )
+      }}
+  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
+  loop_control:
+    extended: true
+    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
+    index_var: idx
+  vars:
+    client_addresses: >-
+      {{
+        ([wg_tunnel_prefix_ipv6 | ansible.utils.nthhost((2**(128 - (wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/128'] if (item[1].allowedips | ansible.utils.ipv6 | length > 0) else [])
+        | union(
+          [wg_tunnel_prefix_ipv4 | ansible.utils.nthhost((2**(32 - (wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/32'] if (item[1].allowedips | ansible.utils.ipv4 | length > 0) else []
+        )
+      }}
+  tags: client_profiles
+
+- copy:
+    content: "{{ profiles | to_nice_yaml }}"
+    dest: ~/tmp/foo/tst.yml
+  tags: client_profiles
+  delegate_to: localhost
+  become: false
+
 - name: Ensure wireguard configuration file is available
   ansible.builtin.template:
     src: config.conf.j2
@@ -42,45 +83,6 @@
     name: "wg-quick@{{ wg_tunnel_iface }}"
     state: started
     enabled: true
-
-- name: Build list of client configuration profiles
-  # To be used later to display as QR, or to create a ZIP file
-  ansible.builtin.set_fact:
-    profiles: >-
-      {{
-        profiles
-        | default([])
-        | union(
-          [
-            {
-              'config': lookup('ansible.builtin.template', 'client.j2'),
-              'name': item[0].name,
-              'tunnel': item[1].tunnel,
-            }
-          ]
-        )
-      }}
-  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
-  loop_control:
-    extended: true
-    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
-    index_var: idx
-  vars:
-    client_addresses: >-
-      {{
-        ([wg_tunnel_prefix_ipv6 | ansible.utils.nthhost((2**(128 - (wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/128'] if (item[1].allowedips | ansible.utils.ipv6 | length > 0) else [])
-        | union(
-          [wg_tunnel_prefix_ipv4 | ansible.utils.nthhost((2**(32 - (wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/32'] if (item[1].allowedips | ansible.utils.ipv4 | length > 0) else []
-        )
-      }}
-  tags: client_profiles
-
-- copy:
-    content: "{{ profiles | to_nice_yaml }}"
-    dest: ~/tmp/foo/tst.yml
-  tags: client_profiles
-  delegate_to: localhost
-  become: false
 
 - name: Display client configuration profiles as QR codes
   ansible.builtin.debug:
