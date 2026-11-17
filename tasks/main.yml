@@ -55,7 +55,7 @@
             {
               'config': lookup('ansible.builtin.template', 'client.j2'),
               'name': item[0].name,
-              'tunnel': item[1].tunnel
+              'tunnel': item[1].tunnel,
             }
           ]
         )
@@ -66,8 +66,21 @@
     label: "{{ item[0].name }}_{{ item[1].tunnel }}"
     index_var: idx
   vars:
-    i: "{{ (idx / 2 + 2) | round(0, 'floor') | int }}"
+    client_addresses: >-
+      {{
+        ([wg_tunnel_prefix_ipv6 | ansible.utils.nthhost((2**(128 - (wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/128'] if (item[1].allowedips | ansible.utils.ipv6 | length > 0) else [])
+        | union(
+          [wg_tunnel_prefix_ipv4 | ansible.utils.nthhost((2**(32 - (wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/32'] if (item[1].allowedips | ansible.utils.ipv4 | length > 0) else []
+        )
+      }}
   tags: client_profiles
+
+- copy:
+    content: "{{ profiles | to_nice_yaml }}"
+    dest: ~/tmp/foo/tst.yml
+  tags: client_profiles
+  delegate_to: localhost
+  become: false
 
 - name: Display client configuration profiles as QR codes
   ansible.builtin.debug:
