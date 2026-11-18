@@ -11,45 +11,39 @@
     name: "{{ wg_packages }}"
     state: present
 
-- name: Build list of client configuration profiles
-  # To be used later to display as QR, or to create a ZIP file
+- name: Add tunnel profiles to clients
   ansible.builtin.set_fact:
-    profiles: >-
+    _wg_clients: >-
       {{
-        profiles
+        _wg_clients
         | default([])
         | union(
           [
-            {
-              'config': lookup('ansible.builtin.template', 'client.j2'),
-              'name': item[0].name,
-              'tunnel': item[1].tunnel,
-              'client': item[0],
-              'old2': item[1],
-              'client_addresses': client_addresses,
-            }
+            client | combine(
+              {
+                'profiles': wg_client_tunnel_flavors,
+                'addresses':
+                  ([wg_tunnel_prefix_ipv6 | ansible.utils.nthhost((2**(128 - (wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=client.id)) ~ '/128'])
+                  | union(
+                    [wg_tunnel_prefix_ipv4 | ansible.utils.nthhost((2**(32 - (wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=client.id)) ~ '/32']
+                  )
+              }
+            )
           ]
         )
       }}
-  loop: "{{ wg_clients | product(wg_client_tunnel_flavors) }}"
+  loop: "{{ wg_clients }}"
   loop_control:
-    extended: true
-    label: "{{ item[0].name }}_{{ item[1].tunnel }}"
-    index_var: idx
+    loop_var: client
+    label: "{{ label }}"
+  tags: always
   vars:
-    client_addresses: >-
-      {{
-        ([wg_tunnel_prefix_ipv6 | ansible.utils.nthhost((2**(128 - (wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/128'] if (item[1].allowedips | ansible.utils.ipv6 | length > 0) else [])
-        | union(
-          [wg_tunnel_prefix_ipv4 | ansible.utils.nthhost((2**(32 - (wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=item[0].name)) ~ '/32'] if (item[1].allowedips | ansible.utils.ipv4 | length > 0) else []
-        )
-      }}
-  tags: client_profiles
+    label: "{{ client.cn | default(client.mail) | default(client.id) }}"
 
 - copy:
-    content: "{{ profiles | to_nice_yaml }}"
-    dest: ~/tmp/foo/tst.yml
-  tags: client_profiles
+    content: "{{ _wg_clients | to_nice_yaml }}"
+    dest: ~/tmp/foo/_wg_client.yml
+  tags: client_profiles2
   delegate_to: localhost
   become: false
 
@@ -85,50 +79,37 @@
     state: started
     enabled: true
 
-- name: Display client configuration profiles as QR codes
-  ansible.builtin.debug:
-    msg: "{{ lookup('pipe', 'echo ' ~ profile.config | quote ~ '| qrencode -t utf8i') }}"
-  loop: "{{ profiles }}"
-  loop_control:
-    loop_var: profile
-    label: "{{ profile.name }}_{{ profile.tunnel }}"
-  when: wg_display_profiles == 'qr'
+# - name: Display client configuration profiles as QR codes
+#   ansible.builtin.debug:
+#     msg: "{{ lookup('pipe', 'echo ' ~ profile.config | quote ~ '| qrencode -t utf8i') }}"
+#   loop: "{{ profiles }}"
+#   loop_control:
+#     loop_var: profile
+#     label: "{{ profile.name }}_{{ profile.tunnel }}"
+#   when: wg_display_profiles == 'qr'
 
-- name: Display client configuration profiles as text
-  ansible.builtin.debug:
-    msg: "{{ profile.config }}"
-  loop: "{{ profiles }}"
-  loop_control:
-    loop_var: profile
-    label: "{{ profile.name }}_{{ profile.tunnel }}"
-  when: wg_display_profiles == 'text'
+# - name: Display client configuration profiles as text
+#   ansible.builtin.debug:
+#     msg: "{{ profile.config }}"
+#   loop: "{{ profiles }}"
+#   loop_control:
+#     loop_var: profile
+#     label: "{{ profile.name }}_{{ profile.tunnel }}"
+#   when: wg_display_profiles == 'text'
 
-- name: Ensure any parent paths are available for exporting profiles
-  ansible.builtin.file:
-    path: "{{ wg_export_file_path | dirname }}"
-    state: directory
-    mode: "0700"
-  run_once: true
-  loop: "{{ profiles }}"
+- name: Include client tasks
+  ansible.builtin.include_tasks:
+    file: client.yml
+  loop: "{{ _wg_clients }}"
   loop_control:
-    loop_var: profile
-    label: "{{ wg_export_file_path | dirname }}"
-  delegate_to: localhost
-  become: false
-  when: wg_export_profiles
-  tags: client_profiles
-
-- name: Export user's client profiles
-  ansible.builtin.copy:
-    content: "{{ profile.config }}"
-    dest: "{{ wg_export_file_path }}"
-    mode: "0400"
-    validate: pyinilint %s
-  loop: "{{ profiles }}"
-  loop_control:
-    loop_var: profile
-    label: "{{ wg_export_file_path }}"
-  delegate_to: localhost
-  become: false
-  when: wg_export_profiles
-  tags: client_profiles
+    loop_var: client
+    label: "{{ label }}"
+  vars:
+    label: "{{ client.cn | default(client.mail) | default(client.id) }}"
+  args:
+    apply:
+      tags:
+        - client_profiles
+      become: false
+      delegate_to: localhost
+  tags: always

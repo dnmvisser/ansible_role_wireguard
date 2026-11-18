@@ -1,0 +1,19 @@
+---
+- name: "Ensure profile directory is available for {{ label }}"
+  ansible.builtin.file:
+    path: "{{ wg_export_profile_path | dirname }}"
+    state: directory
+    mode: "0700"
+  when: wg_export_profiles | bool
+
+- name: "Export client profiles for {{ label }}"
+  ansible.builtin.copy:
+    content: "{{ lookup('ansible.builtin.template', 'client.j2') }}"
+    dest: "{{ wg_export_profile_path }}"
+    mode: "0400"
+    validate: pyinilint %s
+  loop: "{{ client.profiles }}"
+  loop_control:
+    loop_var: profile
+    label: "{{ label }} - {{ profile.tunnel }}"
+  when: wg_export_profiles | bool

@@ -5,7 +5,9 @@ if ! command -v wg >/dev/null 2>&1; then
 fi
 
 private_key=$(wg genkey)
-echo "- name: $1
+echo "- id: $1
+  # cn: ....
+  # mail: ....
   private_key: $private_key
   public_key: $(echo $private_key | wg pubkey)
   preshared_key: $(wg genpsk)"

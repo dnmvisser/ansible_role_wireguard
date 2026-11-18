@@ -1,14 +1,14 @@
-# WireGuard profile '{{ item[1].tunnel }}'
-# Generated at {{ ansible_facts['date_time'].iso8601_micro }}, for user '{{ item[0].name }}'
+# WireGuard profile '{{ profile.tunnel }}' for user {{ label }}
+# Generated at {{ ansible_facts['date_time'].iso8601_micro }}
 [Interface]
-Address = {{ client_addresses | join(',') }}
-PrivateKey = {{ item[0].private_key }}
+Address = {{ client.addresses | join(',') }}
+PrivateKey = {{ client.private_key }}
 DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
 PublicKey = {{ wg_public_key }}
-PresharedKey = {{ item[0].preshared_key }}
+PresharedKey = {{ client.preshared_key }}
 Endpoint = {{ wg_hostname }}:{{ wg_public_port }}
-AllowedIPs = {{ item[1].allowedips | ansible.utils.cidr_merge | join(',') }}
+AllowedIPs = {{ profile.allowedips | ansible.utils.cidr_merge | join(',') }}
 {% if peer_persistentkeepalive|int > 0 %}
 PersistentKeepalive = {{ peer_persistentkeepalive }}
 {% endif %}

@@ -171,15 +171,15 @@ wg_clients: [] # store this in a vaulted file
 # for user in henk frank rob; do ./gen_wg_client.sh $user; done
 #
 # wg_clients:
-#   - name: henk
+#   - id: henk
 #     private_key: CFfO/LLB22RA+TMaEDLV4NJKf4SAz4VAGsH/2Lkrv2E=
 #     public_key: dr79XUUKH7kiaDs1k8eJjgeHKzzvwjh3sP9+DHruFRE=
 #     preshared_key: VKousrfIMfCWPDETsB1PaFUQ0P/44p4Y5r1uPE1y+Gs=
-#   - name: frank
+#   - id: frank
 #     private_key: ED18vIO0we8H4wpW3jloCY1SH0dA7SBXGaC964hPd0E=
 #     public_key: 0W93NJcL5LTTXur7LmVwyswp6NdIotKcxy+mz6y3BUg=
 #     preshared_key: k18pJAaQU7WruAapsji+8RWwTNVj8Vn81qDPithr2kM=
-#   - name: rob
+#   - id: rob
 #     private_key: 8AjD3LnXypjJH+V17CdGIo5Py505Ua8tLxNLMl/0pUY=
 #     public_key: a8HyYDnc2qnAoi5Y3rk1wNIxhxmvlnoIIe9Hs946AjE=
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
@@ -195,10 +195,9 @@ wg_export_profiles: false
 
 # Export all profiles to a local directory
 wg_export_profiles_dir: ~/tmp/foo
-# Adjust the path of each profile. By default we create
-# subdirectories for each one, which contains one file for
-# each tunnel
-wg_export_file_path: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_hostname }}-{{ profile.name }} - {{ profile.tunnel }}.conf"
+
+# To be used for individual profiles
+wg_export_profile_path: "{{ wg_export_profiles_dir }}/{{ label }}/{{ profile.tunnel | default('') }}.conf"
 
 # Emit the minimum amount of information that is required to function properly.
 # Strip out comments, account names, public keys that are not needed, etc.
