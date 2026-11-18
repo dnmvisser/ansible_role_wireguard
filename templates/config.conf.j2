@@ -21,10 +21,10 @@ PostDown = {{ cmd | replace(';', '\;') }}
 {% endfor %}
 
 {# client part #}
-{% for profile in profiles %}
+{% for profile in profiles | selectattr('tunnel', '==', 'full') %}
 [Peer]
 {% if not wg_stealth_mode | bool %}
-# {{ profile.client.name }}
+# {{ profile.name }}
 {% endif %}
 PublicKey = {{ profile.client.public_key }}
 PresharedKey = {{ profile.client.preshared_key }}

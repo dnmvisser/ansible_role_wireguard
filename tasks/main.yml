@@ -26,6 +26,7 @@
               'tunnel': item[1].tunnel,
               'client': item[0],
               'old2': item[1],
+              'client_addresses': client_addresses,
             }
           ]
         )
