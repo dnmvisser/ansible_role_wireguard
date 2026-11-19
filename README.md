@@ -44,15 +44,18 @@ display QR codes, that can be used by clients such as smart phones.
       # Generate these by running the gen_wg_client.sh script inside
       # the files directory:
       # for user in henk youssef rob; do ./gen_wg_client.sh $user; done
-      - name: henk
+      - id: henk
         private_key: 0PkVWoVzebEQk6qVDMYmr5P3ZSgWwlWapht0QhrxtXg=
         public_key: fj5+XU9w455S4NLhSvSYbDJWNE4j5PaWkQO43u7Mlxk=
         preshared_key: GiOfhMycS77weMZZcq4x95rc9cXkpMvpRskA4fDr+9M=
-      - name: youssef
+      - id: youssef
         private_key: aNS7ZHiPWtL9lHCCeGSvwb1llxl+TeeaJvpXLXGzEF4=
         public_key: YjCe3Vxdsle/Z3igCwLtat3vf/NNub/IaJE432gSNCc=
         preshared_key: t6g+i6NFkuFJnTWUJf3abXsq3ptNc2JcpYquj08U+K4=
-      - name: rob
+      - id: rob
+        # Use the nth IP address of the prefix. Otherwise use id to generate
+        # a pseudo random/repeatable id
+        host_id: 66
         private_key: aEO9GjsfXDZCU/BapQuwuq4OIvIxZS52Lr0u6itSsm0=
         public_key: /IyJzlqI+WAmaYxeD9K5UIneRflFDJaDD1zFn1LUU2M=
         preshared_key: qBb0oVL2TVOxvNFiaErDctoCRsEhQwJDFfTkfHKoWb4=

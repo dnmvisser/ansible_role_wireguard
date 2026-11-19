@@ -23,9 +23,9 @@
               {
                 'profiles': wg_client_tunnel_flavors,
                 'addresses':
-                  ([wg_tunnel_prefix_ipv6 | ansible.utils.nthhost((2**(128 - (wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=client.id)) ~ '/128'])
+                  ([wg_tunnel_prefix_ipv6 | ansible.utils.nthhost(client.host_id | default((2**(128 - (wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=client.id, start=2))) ~ '/128'])
                   | union(
-                    [wg_tunnel_prefix_ipv4 | ansible.utils.nthhost((2**(32 - (wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=client.id)) ~ '/32']
+                    [wg_tunnel_prefix_ipv4 | ansible.utils.nthhost(client.host_id | default((2**(32 - (wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr('prefix'))) | int) | random(seed=client.id, start=2))) ~ '/32']
                   )
               }
             )

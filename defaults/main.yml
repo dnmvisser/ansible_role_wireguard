@@ -182,6 +182,7 @@ wg_clients: []
 #     public_key: 0W93NJcL5LTTXur7LmVwyswp6NdIotKcxy+mz6y3BUg=
 #     preshared_key: k18pJAaQU7WruAapsji+8RWwTNVj8Vn81qDPithr2kM=
 #   - id: rob
+#     host_id: 66
 #     private_key: 8AjD3LnXypjJH+V17CdGIo5Py505Ua8tLxNLMl/0pUY=
 #     public_key: a8HyYDnc2qnAoi5Y3rk1wNIxhxmvlnoIIe9Hs946AjE=
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
