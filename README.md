@@ -87,25 +87,10 @@ Note that this is only for convenience and NOT a security measure. It will
 cause the profiles to contain these prefixes. As users are free to edit the
 profile, they can choose whatever prefixes they wish to tunnel.
 
-If you set `wg_diplay_profiles` to `qr`, then the client configuration
+If you set `-e wg_export_profiles=qr`, then the client configuration
 profiles will be echoed as QR codes, for easy scanning with your Android/iOS
 device. The client profiles will NOT be stored anywhere on the server. If you
-_do_ need to see them as text, then set `wg_display_profiles` to `text`. NOTE:
-the profile display feature only works correctly when the stdout callback is set
-to `yaml`, which is not the default. Either add this to your `ansible.cfg`:
-
-```ini
-[defaults]
-stdout_callback = ansible.builtin.yaml
-```
-
-Or supply the corresponding environment variable on the command line:
-
-```shell
-ANSIBLE_STDOUT_CALLBACK=yaml ansible-playbook vpn.yml -e wg_diplay_profiles=qr ....
-```
+_do_ need to see them as text, then set `-e wg_export_profiles=text`.
 
 Yet another option is to write the configuration files to a local directory. To
-do this, set `wg_export_profiles=1`.
-
-FIXME: add more docs
+do this, set `-e wg_export_profiles=files`.
