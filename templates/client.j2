@@ -1,18 +1,20 @@
-# WireGuard profile '{{ item[1].tunnel }}'
-# Generated at {{ ansible_facts['date_time'].iso8601_micro }}, for user '{{ item[0].name }}'
+# WireGuard profile '{{ profile.tunnel }}' for user {{ label }}
+# Generated at {{ ansible_facts['date_time'].iso8601_micro }}
 [Interface]
 Address = {{
-  ([wg_tunnel_prefix_ipv6 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/128'] if wg_ipv6_enable | bool else []) | union(
-  ([wg_tunnel_prefix_ipv4 | ansible.utils.ipaddr(i) | ansible.utils.ipaddr('address') ~ '/32'] if wg_ipv4_enable | bool else [])) |
-  sort(reverse=True) | ansible.utils.ipaddr | join(',')
+  (client.addresses | ansible.utils.ipv6 if profile.allowedips | ansible.utils.ipv6 else [])
+  | union(
+    (client.addresses | ansible.utils.ipv4 if profile.allowedips | ansible.utils.ipv4 else [])
+  )
+  | join(',')
 }}
-PrivateKey = {{ item[0].private_key }}
-DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
+PrivateKey = {{ client.private_key }}
+DNS = {{ [profile.resolver | default(wg_resolver)] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
 PublicKey = {{ wg_public_key }}
-PresharedKey = {{ item[0].preshared_key }}
+PresharedKey = {{ client.preshared_key }}
 Endpoint = {{ wg_hostname }}:{{ wg_public_port }}
-AllowedIPs = {{ item[1].allowedips | ansible.utils.cidr_merge | join(',') }}
-{% if peer_persistentkeepalive|int > 0 %}
+AllowedIPs = {{ profile.allowedips | ansible.utils.cidr_merge | join(',') }}
+{% if peer_persistentkeepalive | int > 0 %}
 PersistentKeepalive = {{ peer_persistentkeepalive }}
 {% endif %}

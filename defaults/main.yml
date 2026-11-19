@@ -31,7 +31,7 @@ wg_public_port: "{{ wg_server_port }}"
 # The first IP addresses of these prefixes will be the server's addresses
 # All subsuquent IPs will be for clients
 wg_tunnel_prefix_ipv6: fd99:9999::/64
-wg_tunnel_prefix_ipv4: 10.99.99.0/24
+wg_tunnel_prefix_ipv4: 10.99.99.0/16
 
 wg_tunnel_prefixes: >-
   {{
@@ -39,6 +39,7 @@ wg_tunnel_prefixes: >-
     | union(([wg_tunnel_prefix_ipv4] if wg_ipv4_enable | bool else [])) | sort(reverse=True)
   }}
 wg_tunnel_addresses: "{{ wg_tunnel_prefixes | map('ansible.utils.ipaddr', '1') }}"
+
 # Resolver address. This is only relevant for the client profiles.
 # What to pick here depends on the scenario:
 # The server's tunnel IP; when running an Adguard/Pihole/etc resolver on the same host
@@ -46,11 +47,12 @@ wg_tunnel_addresses: "{{ wg_tunnel_prefixes | map('ansible.utils.ipaddr', '1') }
 # The server's default resolver; for hosts that are directly connected to the internet
 wg_resolver: "{{ ansible_facts['dns'].nameservers[0] }}"
 
-
 # What clients should be connecting to. For systems behind NAT, this is the NAT
 # gateway's public IP address or FQDN. This requires a port to be mapped/forwarded.
 # wg_hostname: vpn.foo.bar
-# For public hosts, you can use the default IP address (default IPv4)
+# For public hosts, you can use the default IP address (default IPv4).
+# If you set this manually, it can make sense to use a literal IP address, to avoid
+# possible MITM DNS lookups in hostile environments.
 wg_hostname: "{{ ansible_facts['default_ipv4'].address if wg_ipv4_enable | bool else ansible_facts['default_ipv6'].address | ansible.utils.ipwrap }}"
 
 wg_config_dir: /etc/wireguard
@@ -165,41 +167,35 @@ wg_postdown:
 # Set to 0 or false to disable this in the [Peer] section
 peer_persistentkeepalive: 10
 
-wg_clients: [] # store this in a vaulted file
+wg_clients: []
 # Create clients by running the gen_wg_client.sh script:
 #
 # for user in henk frank rob; do ./gen_wg_client.sh $user; done
 #
 # wg_clients:
-#   - name: henk
+#   - id: henk
 #     private_key: CFfO/LLB22RA+TMaEDLV4NJKf4SAz4VAGsH/2Lkrv2E=
 #     public_key: dr79XUUKH7kiaDs1k8eJjgeHKzzvwjh3sP9+DHruFRE=
 #     preshared_key: VKousrfIMfCWPDETsB1PaFUQ0P/44p4Y5r1uPE1y+Gs=
-#   - name: frank
+#   - id: frank
 #     private_key: ED18vIO0we8H4wpW3jloCY1SH0dA7SBXGaC964hPd0E=
 #     public_key: 0W93NJcL5LTTXur7LmVwyswp6NdIotKcxy+mz6y3BUg=
 #     preshared_key: k18pJAaQU7WruAapsji+8RWwTNVj8Vn81qDPithr2kM=
-#   - name: rob
+#   - id: rob
+#     host_id: 66
 #     private_key: 8AjD3LnXypjJH+V17CdGIo5Py505Ua8tLxNLMl/0pUY=
 #     public_key: a8HyYDnc2qnAoi5Y3rk1wNIxhxmvlnoIIe9Hs946AjE=
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
 
-# Display client profiles
-wg_display_profiles: false
-# wg_display_profiles: qr
-# wg_display_profiles: text
-
-# Export all profiles to a local ZIP file
-# Also needs to set the path to it
-wg_export_profiles: false
-
-# Export all profiles to a local directory
-wg_export_profiles_dir: ~/tmp/foo
-# Adjust the path of each profile. By default we create
-# subdirectories for each one, which contains one file for
-# each tunnel
-wg_export_file_path: "{{ wg_export_profiles_dir }}/{{ profile.name }}/{{ wg_hostname }}-{{ profile.name }} - {{ profile.tunnel }}.conf"
-
 # Emit the minimum amount of information that is required to function properly.
 # Strip out comments, account names, public keys that are not needed, etc.
 wg_stealth_mode: false
+
+# See wg_export_profiles_list
+# Can one of files, text, qr.
+# wg_export_profiles: files
+
+# Used when wg_export_profiles is 'files.
+wg_export_profiles_dir: ~/tmp/foo
+wg_export_profile_filename_prefix: ''
+wg_export_profile_path: "{{ wg_export_profiles_dir }}/{{ label }}/{{ wg_export_profile_filename_prefix }}{{ profile.tunnel | default('') }}.conf"
