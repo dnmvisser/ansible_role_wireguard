@@ -41,11 +41,12 @@
     label: "{{ client.cn | default(client.mail) | default(client.id) }}"
 
 - copy:
+    dest: ~/tmp/foo/clients.yml
     content: "{{ _wg_clients | to_nice_yaml }}"
-    dest: ~/tmp/foo/_wg_client.yml
-  tags: client_profiles2
+    mode: "0640"
   delegate_to: localhost
   become: false
+  tags: always
 
 - name: Ensure wireguard configuration file is available
   ansible.builtin.template:

@@ -1,14 +1,20 @@
 # WireGuard profile '{{ profile.tunnel }}' for user {{ label }}
 # Generated at {{ ansible_facts['date_time'].iso8601_micro }}
 [Interface]
-Address = {{ client.addresses | join(',') }}
+Address = {{
+  (client.addresses | ansible.utils.ipv6 if profile.allowedips | ansible.utils.ipv6 else [])
+  | union(
+    (client.addresses | ansible.utils.ipv4 if profile.allowedips | ansible.utils.ipv4 else [])
+  )
+  | join(',')
+}}
 PrivateKey = {{ client.private_key }}
-DNS = {{ [wg_resolver] | union(wg_dns_search_domains) | join(',') }}
+DNS = {{ [profile.resolver | default(wg_resolver)] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
 PublicKey = {{ wg_public_key }}
 PresharedKey = {{ client.preshared_key }}
 Endpoint = {{ wg_hostname }}:{{ wg_public_port }}
 AllowedIPs = {{ profile.allowedips | ansible.utils.cidr_merge | join(',') }}
-{% if peer_persistentkeepalive|int > 0 %}
+{% if peer_persistentkeepalive | int > 0 %}
 PersistentKeepalive = {{ peer_persistentkeepalive }}
 {% endif %}

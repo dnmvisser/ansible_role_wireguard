@@ -1,5 +1,5 @@
 ---
-- name: "Export profiles for {{ label }} as clear text"
+- name: "Export profiles for {{ label }} as clear text"  # noqa name[template]
   ansible.builtin.debug:
     msg: "{{ lookup('ansible.builtin.template', 'client.j2') }}"
   loop: "{{ client.profiles }}"
