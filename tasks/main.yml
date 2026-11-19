@@ -79,27 +79,9 @@
     state: started
     enabled: true
 
-# - name: Display client configuration profiles as QR codes
-#   ansible.builtin.debug:
-#     msg: "{{ lookup('pipe', 'echo ' ~ profile.config | quote ~ '| qrencode -t utf8i') }}"
-#   loop: "{{ profiles }}"
-#   loop_control:
-#     loop_var: profile
-#     label: "{{ profile.name }}_{{ profile.tunnel }}"
-#   when: wg_display_profiles == 'qr'
-
-# - name: Display client configuration profiles as text
-#   ansible.builtin.debug:
-#     msg: "{{ profile.config }}"
-#   loop: "{{ profiles }}"
-#   loop_control:
-#     loop_var: profile
-#     label: "{{ profile.name }}_{{ profile.tunnel }}"
-#   when: wg_display_profiles == 'text'
-
-- name: Include client tasks
+- name: Include profile export tasks
   ansible.builtin.include_tasks:
-    file: client.yml
+    file: "export_profiles_{{ wg_export_profiles }}.yml"
   loop: "{{ _wg_clients }}"
   loop_control:
     loop_var: client
@@ -108,8 +90,8 @@
     label: "{{ client.cn | default(client.mail) | default(client.id) }}"
   args:
     apply:
-      tags:
-        - client_profiles
       become: false
       delegate_to: localhost
-  tags: always
+  when:
+    - wg_export_profiles is defined
+    - wg_export_profiles is in wg_export_profiles_list

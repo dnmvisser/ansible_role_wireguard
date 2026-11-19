@@ -1,0 +1,8 @@
+---
+- name: "Export profiles for {{ label }} as clear text"
+  ansible.builtin.debug:
+    msg: "{{ lookup('ansible.builtin.template', 'client.j2') }}"
+  loop: "{{ client.profiles }}"
+  loop_control:
+    loop_var: profile
+    label: "{{ label }} - {{ profile.tunnel }}"

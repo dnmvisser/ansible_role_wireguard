@@ -1,0 +1,8 @@
+---
+- name: "Export client profiles for {{ label }} as QR"
+  ansible.builtin.debug:
+    msg: "{{ lookup('pipe', 'echo ' ~ lookup('ansible.builtin.template', 'client.j2') | quote  ~ '| qrencode -t utf8i') }}"
+  loop: "{{ client.profiles }}"
+  loop_control:
+    loop_var: profile
+    label: "{{ label }} - {{ profile.tunnel }}"

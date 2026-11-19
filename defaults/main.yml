@@ -184,15 +184,6 @@ wg_clients: [] # store this in a vaulted file
 #     public_key: a8HyYDnc2qnAoi5Y3rk1wNIxhxmvlnoIIe9Hs946AjE=
 #     preshared_key: Mdu2caAWNC9WEp4j5SKHNo36iIDuL4LsMPF+3K2Wxwc=
 
-# Display client profiles
-wg_display_profiles: false
-# wg_display_profiles: qr
-# wg_display_profiles: text
-
-# Export all profiles to a local ZIP file
-# Also needs to set the path to it
-wg_export_profiles: false
-
 # Export all profiles to a local directory
 wg_export_profiles_dir: ~/tmp/foo
 
@@ -202,3 +193,6 @@ wg_export_profile_path: "{{ wg_export_profiles_dir }}/{{ label }}/{{ profile.tun
 # Emit the minimum amount of information that is required to function properly.
 # Strip out comments, account names, public keys that are not needed, etc.
 wg_stealth_mode: false
+
+# See wg_export_profiles_list
+# wg_export_profiles: files

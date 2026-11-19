@@ -3,8 +3,13 @@ wg_packages:
   - wireguard
   - iptables
 
-wg_kernel_debug_control_file: /sys/kernel/debug/dynamic_debug/control
+# Supported client export methods
+wg_export_profiles_list:
+  - files
+  - qr
+  - text
 
+wg_kernel_debug_control_file: /sys/kernel/debug/dynamic_debug/control
 
 # Helpers
 wg_dualstack: "{{ wg_ipv6_enable | bool and wg_ipv4_enable | bool }}"
