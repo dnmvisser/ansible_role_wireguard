@@ -31,7 +31,7 @@ wg_public_port: "{{ wg_server_port }}"
 # The first IP addresses of these prefixes will be the server's addresses
 # All subsuquent IPs will be for clients
 wg_tunnel_prefix_ipv6: fd99:9999::/64
-wg_tunnel_prefix_ipv4: 10.99.99.0/16
+wg_tunnel_prefix_ipv4: 10.99.0.0/16
 
 wg_tunnel_prefixes: >-
   {{
