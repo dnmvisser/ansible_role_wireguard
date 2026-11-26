@@ -12,7 +12,9 @@ PrivateKey = {{ client.private_key | default('REPLACE_WITH_PRIVATE_KEY') }}
 DNS = {{ [profile.resolver | default(wg_resolver)] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
 PublicKey = {{ wg_public_key }}
+{% if 'preshared_key' in client %}
 PresharedKey = {{ client.preshared_key }}
+{% endif %}
 Endpoint = {{ wg_hostname }}:{{ wg_public_port }}
 AllowedIPs = {{ profile.allowedips | ansible.utils.cidr_merge | join(',') }}
 {% if peer_persistentkeepalive | int > 0 %}
