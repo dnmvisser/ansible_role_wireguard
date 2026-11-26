@@ -28,6 +28,8 @@ PostDown = {{ cmd | replace(';', '\;') }}
 # {{ label }}
 {% endif %}
 PublicKey = {{ client.public_key }}
+{% if 'preshared_key' in client %}
 PresharedKey = {{ client.preshared_key }}
+{% endif %}
 AllowedIPs = {{ client.addresses | join(',') }}
 {% endfor %}
