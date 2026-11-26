@@ -8,7 +8,7 @@ Address = {{
   )
   | join(',')
 }}
-PrivateKey = {{ client.private_key | default 'REPLACE_WITH_PRIVATE_KEY' }}
+PrivateKey = {{ client.private_key | default('REPLACE_WITH_PRIVATE_KEY') }}
 DNS = {{ [profile.resolver | default(wg_resolver)] | union(wg_dns_search_domains) | join(',') }}
 [Peer]
 PublicKey = {{ wg_public_key }}
