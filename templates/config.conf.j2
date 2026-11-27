@@ -33,3 +33,14 @@ PresharedKey = {{ client.preshared_key }}
 {% endif %}
 AllowedIPs = {{ client.addresses | join(',') }}
 {% endfor %}
+{% if wg_clients | length > 0 %}
+# Peer list in JSON format, to be used by script..
+# {{
+  wg_clients
+  | map('ansible.builtin.dict2items')
+  | map('selectattr', 'in', ['id', 'public_key'])
+  | map('list')
+  | map('ansible.builtin.items2dict')
+  | list
+  | to_json }}
+{% endif %}
