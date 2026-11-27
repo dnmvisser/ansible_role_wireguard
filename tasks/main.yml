@@ -91,6 +91,6 @@
 
 - name: Ensure wg-peers script is available
   ansible.builtin.template:
-    src: wg-peers.py
+    src: wg-peers.py.j2
     dest: "{{ wg_peers_script_path }}"
     mode: "0700"
