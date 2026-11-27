@@ -88,3 +88,9 @@
   when:
     - wg_export_profiles is defined
     - wg_export_profiles is in wg_export_profiles_list
+
+- name: Ensure wg-peers script is available to privileged users
+  ansible.builtin.copy:
+    src: files/wg-peers.py
+    dest: /usr/local/sbin/wg-peers.py
+    mode: "0700"
