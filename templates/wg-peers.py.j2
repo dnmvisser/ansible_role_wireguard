@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Show WireGuard peer status, resolving IDs from the '# wg-peers:' line in wg0.conf.
+# {{ ansible_managed }}
+"""Show WireGuard peer status, resolving IDs from the '# wg-peers:' line in the config.
 
 If the line is absent (e.g. wg_stealth_mode), peers are shown by public key only.
 """
@@ -13,16 +14,19 @@ import time
 ONLINE_SECS = 180  # handshakes happen ~every 120s while traffic flows
 MARKER = re.compile(r"^\s*#\s*wg-peers:\s*(\[.*\])\s*$")
 PUBKEY = re.compile(r"^\s*PublicKey\s*=\s*(\S+)\s*$")
+ADDRESS = re.compile(r"^\s*Address\s*=\s*(.+?)\s*$")
 
 
 def parse_conf(conf_path):
-    """Return (ids, conf_keys).
+    """Return (ids, conf_keys, addresses).
 
-    ids:       {public_key: id} from the embedded JSON comment, or None if absent
-    conf_keys: set of public keys found in [Peer] PublicKey lines
+    ids:        {public_key: id} from the embedded JSON comment, or None if absent
+    conf_keys:  set of public keys found in [Peer] PublicKey lines
+    addresses:  list of Address values from the config
     """
     index = None
     conf_keys = set()
+    addresses = []
     with open(conf_path) as f:
         for line in f:
             m = MARKER.match(line)
@@ -34,8 +38,12 @@ def parse_conf(conf_path):
             m = PUBKEY.match(line)
             if m:
                 conf_keys.add(m.group(1))
+                continue
+            m = ADDRESS.match(line)
+            if m:
+                addresses.append(m.group(1))
     ids = None if index is None else {e["public_key"]: e["id"] for e in index}
-    return ids, conf_keys
+    return ids, conf_keys, addresses
 
 
 def read_live(iface):
@@ -43,8 +51,12 @@ def read_live(iface):
         ["wg", "show", iface, "dump"],
         check=True, capture_output=True, text=True,
     ).stdout.splitlines()
+    # Line 0 is the interface: private-key, public-key, listen-port, fwmark.
+    # Never keep the private key.
+    _priv, server_pub, listen_port, _fwmark = out[0].split("\t")
+    server = {"public_key": server_pub, "listen_port": int(listen_port)}
     peers = {}
-    for line in out[1:]:  # line 0 is the interface (has the private key); skip
+    for line in out[1:]:
         pub, _psk, endpoint, allowed, hs, rx, tx, _ka = line.split("\t")
         peers[pub] = {
             "endpoint": None if endpoint == "(none)" else endpoint,
@@ -53,7 +65,32 @@ def read_live(iface):
             "rx": int(rx),         # bytes received from the peer
             "tx": int(tx),         # bytes sent to the peer
         }
-    return peers
+    return server, peers
+
+
+def interface_start(unit):
+    """Epoch time the systemd unit became active, or None if unknown.
+
+    Uses the unit's monotonic activation timestamp, converted to wall-clock
+    time. Returns None if the unit isn't active (e.g. the interface was
+    brought up by hand), because the timestamp could then be stale.
+    """
+    try:
+        out = subprocess.run(
+            ["systemctl", "show", unit,
+             "-p", "ActiveState", "-p", "ActiveEnterTimestampMonotonic"],
+            check=True, capture_output=True, text=True,
+        ).stdout
+        props = dict(l.split("=", 1) for l in out.splitlines() if "=" in l)
+        if props.get("ActiveState") != "active":
+            return None
+        mono_us = int(props["ActiveEnterTimestampMonotonic"])
+    except (OSError, subprocess.CalledProcessError, KeyError, ValueError):
+        return None
+    if mono_us == 0:
+        return None
+    since_start = time.clock_gettime(time.CLOCK_MONOTONIC) - mono_us / 1e6
+    return int(time.time() - since_start)
 
 
 def human_bytes(n):
@@ -119,6 +156,18 @@ def warn_drift(ids, conf_keys):
               f"index but has no [Peer] block", file=sys.stderr)
 
 
+def server_line(s):
+    if s["started"] is None:
+        up = "up since unknown (not started by systemd unit)"
+    else:
+        when = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime(s["started"]))
+        up = f"up since {when} ({human_ago(int(time.time()) - s['started'])})"
+    addr = ",".join(s["addresses"]) if s["addresses"] else "-"
+    return (f"{s['interface']}  key {s['public_key'][:8]}...  "
+            f"port {s['listen_port']}  addr {addr}  {up}  "
+            f"peers {s['peers_total']} ({s['peers_online']} online)")
+
+
 def print_table(rows):
     headers = ["ID", "KEY", "STATUS", "LAST SEEN", "ENDPOINT",
                "ALLOWED IPS", "RX", "TX"]
@@ -135,24 +184,37 @@ def print_table(rows):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("-i", "--interface", default="wg0")
+    ap.add_argument("-i", "--interface", default={{ wg_interface | to_json }})
     ap.add_argument("-c", "--conf", help="default: /etc/wireguard/<iface>.conf")
+    ap.add_argument("-u", "--unit",
+                    help="systemd unit for start time (default: wg-quick@<iface>.service)")
     ap.add_argument("--json", action="store_true", help="output JSON")
     args = ap.parse_args()
     conf = args.conf or f"/etc/wireguard/{args.interface}.conf"
+    unit = args.unit or f"wg-quick@{args.interface}.service"
 
     try:
-        ids, conf_keys = parse_conf(conf)
-        live = read_live(args.interface)
+        ids, conf_keys, addresses = parse_conf(conf)
+        server, live = read_live(args.interface)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as e:
         sys.exit(f"error: {e!r} (are you root?)")
 
     warn_drift(ids, conf_keys)
     rows = build_rows(ids, live)
+    server.update(
+        interface=args.interface,
+        addresses=addresses,
+        started=interface_start(unit),
+        peers_total=len(rows),
+        peers_online=sum(1 for r in rows if r["status"] == "online"),
+    )
+
     if args.json:
-        json.dump(rows, sys.stdout, indent=2)
+        json.dump({"server": server, "peers": rows}, sys.stdout, indent=2)
         print()
     else:
+        print(server_line(server))
+        print()
         print_table(rows)
 
 

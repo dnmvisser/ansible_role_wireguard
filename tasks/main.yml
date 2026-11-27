@@ -90,7 +90,7 @@
     - wg_export_profiles is in wg_export_profiles_list
 
 - name: Ensure wg-peers script is available
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: files/wg-peers.py
     dest: "{{ wg_peers_script_path }}"
     mode: "0700"
