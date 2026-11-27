@@ -33,3 +33,9 @@ PresharedKey = {{ client.preshared_key }}
 {% endif %}
 AllowedIPs = {{ client.addresses | join(',') }}
 {% endfor %}
+{% if wg_clients | length > 0 %}
+{% if not wg_stealth_mode | bool %}
+# Peer list in JSON format, to be used by script..
+# wg-peers: {{ wg_clients | json_query('[].{id: id, public_key: public_key}') | to_json(separators=(',', ':')) }}
+{% endif %}
+{% endif %}

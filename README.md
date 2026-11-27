@@ -94,3 +94,8 @@ _do_ need to see them as text, then set `-e wg_export_profiles=text`.
 
 Yet another option is to write the configuration files to a local directory. To
 do this, set `-e wg_export_profiles=files`.
+
+# Utilities
+
+A `wg-peers.py` script is put into /usr/local/sbin, which will show a list of
+peers and their ID, key, status, last seen, etc.

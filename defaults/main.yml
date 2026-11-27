@@ -199,3 +199,5 @@ wg_stealth_mode: false
 wg_export_profiles_dir: ~/tmp/foo
 wg_export_profile_filename_prefix: ''
 wg_export_profile_path: "{{ wg_export_profiles_dir }}/{{ label }}/{{ wg_export_profile_filename_prefix }}{{ profile.tunnel | default('') }}.conf"
+
+wg_peers_script_path: /usr/local/bin/wg-peers.py
