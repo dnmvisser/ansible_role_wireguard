@@ -184,7 +184,7 @@ def print_table(rows):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("-i", "--interface", default={{ wg_interface | to_json }})
+    ap.add_argument("-i", "--interface", default={{ wg_tunnel_iface | to_json }})
     ap.add_argument("-c", "--conf", help="default: /etc/wireguard/<iface>.conf")
     ap.add_argument("-u", "--unit",
                     help="systemd unit for start time (default: wg-quick@<iface>.service)")
